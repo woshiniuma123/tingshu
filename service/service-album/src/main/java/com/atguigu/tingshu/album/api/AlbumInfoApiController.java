@@ -27,6 +27,7 @@ public class AlbumInfoApiController {
         List<JSONObject> list = albumInfoService.getBaseCategoryList();
         System.out.println("====");
         System.out.println("====");
+        System.out.println("====");
 
         return Result.ok(list);
     }

@@ -7,4 +7,5 @@ import org.apache.ibatis.annotations.Mapper;
 @Mapper
 public interface BaseCategoryViewMapper extends BaseMapper<BaseCategoryView> {
 
+    BaseCategoryView getCategoryViewByCategory3Id(Long category3Id);
 }

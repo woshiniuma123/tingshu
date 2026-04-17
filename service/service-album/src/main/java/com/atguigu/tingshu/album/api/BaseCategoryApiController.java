@@ -3,6 +3,7 @@ package com.atguigu.tingshu.album.api;
 import com.alibaba.fastjson.JSONObject;
 import com.atguigu.tingshu.album.service.BaseCategoryService;
 import com.atguigu.tingshu.common.result.Result;
+import com.atguigu.tingshu.model.album.BaseCategoryView;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -39,6 +40,13 @@ public class BaseCategoryApiController {
     public Result<List<JSONObject>> getAttributeByCategory1Id(@PathVariable("category1Id") Long category1Id) {
         List<JSONObject> list = baseCategoryService.getAttributeByCategory1Id(category1Id);
         return Result.ok(list);
+    }
+
+    @Operation(summary = "根据三级分类Id 获取到分类信息")
+    @GetMapping("/category/getCategoryView/{category3Id}")
+    public Result<BaseCategoryView> getCategoryViewByCategory3Id(@PathVariable Long category3Id) {
+        BaseCategoryView categoryView = baseCategoryService.getCategoryViewByCategory3Id(category3Id);
+        return Result.ok(categoryView);
     }
 }
 

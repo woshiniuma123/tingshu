@@ -98,4 +98,10 @@ public class BaseCategoryServiceImpl extends ServiceImpl<BaseCategory1Mapper, Ba
         });
         return resultList;
     }
+
+    @Override
+    public BaseCategoryView getCategoryViewByCategory3Id(Long category3Id) {
+        BaseCategoryView baseCategoryView = baseCategoryViewMapper.getCategoryViewByCategory3Id(category3Id);
+        return baseCategoryView;
+    }
 }

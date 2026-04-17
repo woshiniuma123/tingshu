@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import javax.sound.midi.Soundbank;
 import java.util.List;
 
 @Tag(name = "专辑管理")
@@ -24,6 +25,7 @@ public class AlbumInfoApiController {
     @GetMapping("/category/getBaseCategoryList")
     public Result<List<JSONObject>> getBaseCategoryList() {
         List<JSONObject> list = albumInfoService.getBaseCategoryList();
+        System.out.println("====");
         return Result.ok(list);
     }
 

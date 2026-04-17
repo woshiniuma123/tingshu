@@ -9,6 +9,6 @@ import java.util.List;
 public interface AlbumInfoService extends IService<AlbumInfo> {
 
 
-    List<JSONObject> getBaseCategoryList();
+
 
 }

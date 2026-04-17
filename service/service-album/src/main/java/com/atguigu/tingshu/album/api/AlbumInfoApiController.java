@@ -21,16 +21,7 @@ public class AlbumInfoApiController {
 
     @Autowired
     private AlbumInfoService albumInfoService;
-    @Operation(summary = "获取1,2,3级分类")
-    @GetMapping("/category/getBaseCategoryList")
-    public Result<List<JSONObject>> getBaseCategoryList() {
-        List<JSONObject> list = albumInfoService.getBaseCategoryList();
-        System.out.println("====");
-        System.out.println("====");
-        System.out.println("====");
 
-        return Result.ok(list);
-    }
 
 }
 

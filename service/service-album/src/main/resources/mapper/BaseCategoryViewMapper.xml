@@ -7,18 +7,32 @@
 
     <select id="getCategoryViewByCategory3Id" resultType="com.atguigu.tingshu.model.album.BaseCategoryView">
 
-        SELECT
-            bc1.id,
-            bc1.id as category1_id,
-            bc1.name as category1_name,
-            bc2.id as category2_id,
-            bc2.name as category2_name,
-            bc3.id as category3_id,
-            bc3.name as category3_name,
-            bc3.create_time
-        from base_category1 bc1
-                 INNER JOIN base_category2 bc2 on bc1.id = bc2.category1_id
-                 INNER JOIN base_category3 bc3 on bc3.category2_id = bc2.id where bc3.id =1001 and bc3.is_deleted = 0
+        /*SELECT
+          bc1.id,
+          bc1.id as category1_id,
+          bc1.name as category1_name,
+          bc2.id as category2_id,
+          bc2.name as category2_name,
+          bc3.id as category3_id,
+          bc3.name as category3_name,
+          bc3.create_time
+          from base_category1 bc1
+          INNER JOIN base_category2 bc2 on bc1.id = bc2.category1_id
+          INNER JOIN base_category3 bc3 on bc3.category2_id = bc2.id where bc3.id =101 and bc3.is_deleted = 0*/
+
+        select id,
+               category1_id,
+               category1_name,
+               category2_id,
+               category2_name,
+               category3_id,
+               category3_name,
+               create_time
+        from base_category_view
+        where id = #{category3Id}
+
     </select>
+
+
 </mapper>
 

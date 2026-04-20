@@ -1,10 +1,18 @@
 package com.atguigu.tingshu.album.api;
 
 import com.atguigu.tingshu.album.service.TrackInfoService;
+import com.atguigu.tingshu.common.result.Result;
+import com.atguigu.tingshu.query.album.TrackInfoQuery;
+import com.atguigu.tingshu.vo.album.TrackInfoVo;
+import com.atguigu.tingshu.vo.album.TrackListVo;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.util.Map;
 
 @Tag(name = "声音管理")
 @RestController
@@ -12,8 +20,38 @@ import org.springframework.web.bind.annotation.RestController;
 @SuppressWarnings({"all"})
 public class TrackInfoApiController {
 
-	@Autowired
-	private TrackInfoService trackInfoService;
+    @Autowired
+    private TrackInfoService trackInfoService;
+
+    /**
+     * 上传声音到腾讯云点播平台
+     *
+     * @param file
+     * @return
+     */
+    @Operation(summary = "上传声音信息到腾讯云点播平台")
+    @PostMapping("/trackInfo/uploadTrack")
+    public Result<Map<String, String>> uploadTrack(@RequestParam MultipartFile file) {
+        Map<String, String> resultMap = trackInfoService.uploadTrack(file);
+        return Result.ok(resultMap);
+    }
+
+    @Operation(summary = "保存声音信息")
+    @PostMapping("/trackInfo/saveTrackInfo")
+    public Result saveTrackInfo(@RequestBody TrackInfoVo trackInfoVo) {
+        trackInfoService.saveTrackInfo(trackInfoVo);
+        return Result.ok();
+    }
+
+    @Operation(summary = "分页查询当前用户上传的声音")
+    @PostMapping("/trackInfo/findUserTrackPage/{page}/{limit}")
+    public Result<Page<TrackListVo>> findUserTrackPage(@PathVariable Long page,
+                                                       @PathVariable Long limit,
+                                                       @RequestBody TrackInfoQuery trackInfoQuery) {
+        Page<TrackListVo> pageModel = trackInfoService.findUserTrackPage(page, limit, trackInfoQuery);
+
+        return Result.ok(pageModel);
+    }
 
 }
 

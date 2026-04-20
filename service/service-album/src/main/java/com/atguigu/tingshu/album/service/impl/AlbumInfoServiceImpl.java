@@ -106,9 +106,9 @@ public class AlbumInfoServiceImpl extends ServiceImpl<AlbumInfoMapper, AlbumInfo
     @Transactional(rollbackFor = Exception.class)
     public void removeAlbumInfo(Long id) {
         //1.先检查该专辑下是否有关联的声音
-        List<TrackInfo> trackInfos = trackInfoMapper.selectList(new LambdaQueryWrapper<TrackInfo>()
-                .eq(TrackInfo::getAlbumId, id));
-        if (trackInfos.size() > 0) {
+        Long count = trackInfoMapper.selectCount(new LambdaQueryWrapper<TrackInfo>()
+                .eq(TrackInfo::getAlbumId, id).eq(TrackInfo::getIsDeleted, 0));
+        if (count > 0) {
             //有关联的声音
             throw new RuntimeException("该专辑下有关联的声音，请先删除该专辑下的声音");
         }
@@ -153,6 +153,8 @@ public class AlbumInfoServiceImpl extends ServiceImpl<AlbumInfoMapper, AlbumInfo
         AlbumInfo albumInfo = BeanUtil.copyProperties(albumInfoVo, AlbumInfo.class);
         albumInfo.setId(id);
         albumInfo.setUserId(userId);
+        //专辑状态改为未审核
+        albumInfo.setStatus(ALBUM_STATUS_NO_PASS);
         //1.3根据id更新专辑信息表
         albumInfoMapper.updateById(albumInfo);
         //2.更新专辑属性值关联表
@@ -167,6 +169,24 @@ public class AlbumInfoServiceImpl extends ServiceImpl<AlbumInfoMapper, AlbumInfo
         //2.2删除专辑属性值关联表信息根据专辑id
         albumAttributeValueService.remove(new LambdaQueryWrapper<AlbumAttributeValue>().eq(AlbumAttributeValue::getAlbumId, id));
         albumAttributeValueService.saveBatch(albumAttributeValueList);
+    }
+
+    /**
+     * 查询当前用户所有的专辑列表
+     *
+     * @param userId
+     * @return
+     */
+    @Override
+    public List<AlbumInfo> findUserAllAlbumList(Long userId) {
+        List<AlbumInfo> albumInfos = albumInfoMapper
+                .selectList(new LambdaQueryWrapper<AlbumInfo>()
+                        .select(AlbumInfo::getId, AlbumInfo::getAlbumTitle)
+                        .eq(AlbumInfo::getUserId, userId)
+                        .eq(AlbumInfo::getIsDeleted, 0)
+                        .orderByDesc(AlbumInfo::getId)
+                        .last("limit 200"));
+        return albumInfos;
     }
 
 

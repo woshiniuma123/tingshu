@@ -1,9 +1,11 @@
 package com.atguigu.tingshu.vo.album;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import lombok.Builder;
 import lombok.Data;
 
 @Data
+@Builder
 @Schema(description = "声音媒体信息")
 public class TrackMediaInfoVo {
 

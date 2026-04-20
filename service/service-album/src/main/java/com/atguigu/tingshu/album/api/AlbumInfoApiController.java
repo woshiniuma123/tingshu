@@ -14,6 +14,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.simpleframework.xml.Path;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import javax.sound.midi.Soundbank;
@@ -29,7 +30,7 @@ public class AlbumInfoApiController {
     private AlbumInfoService albumInfoService;
 
     @PostMapping("/albumInfo/saveAlbumInfo")
-    public Result saveAlbumInfo(@RequestBody AlbumInfoVo albumInfoVo) {
+    public Result saveAlbumInfo(@Validated @RequestBody AlbumInfoVo albumInfoVo) {
         albumInfoService.saveAlbumInfo(albumInfoVo);
         return Result.ok();
     }
@@ -58,9 +59,16 @@ public class AlbumInfoApiController {
     }
 
     @PutMapping("/albumInfo/updateAlbumInfo/{id}")
-    public Result updateAlbumInfo(@PathVariable Long id, @RequestBody AlbumInfoVo albumInfoVo) {
+    public Result updateAlbumInfo(@PathVariable Long id, @Validated @RequestBody AlbumInfoVo albumInfoVo) {
         albumInfoService.updateAlbumInfo(id, albumInfoVo);
         return Result.ok();
+    }
+
+    @GetMapping("/albumInfo/findUserAllAlbumList")
+    public Result<List<AlbumInfo>> findUserAllAlbumList() {
+        Long userId = AuthContextHolder.getUserId();
+        List<AlbumInfo> albumInfoList = albumInfoService.findUserAllAlbumList(userId);
+        return Result.ok(albumInfoList);
     }
 }
 

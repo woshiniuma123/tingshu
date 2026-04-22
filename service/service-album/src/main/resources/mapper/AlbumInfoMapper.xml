@@ -76,7 +76,8 @@
                aav.album_id,
                aav.value_id,
                aav.attribute_id,
-               aav.create_time
+               aav.create_time,
+               ai.user_id
         from album_info ai
                  inner join album_attribute_value aav on ai.id = aav.album_id
         where ai.id = #{id}

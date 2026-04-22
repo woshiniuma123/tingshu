@@ -1,25 +1,25 @@
 package com.atguigu.tingshu.album.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
-import com.alibaba.fastjson.JSON;
-import com.alibaba.fastjson.JSONObject;
 import com.atguigu.tingshu.album.mapper.AlbumInfoMapper;
 import com.atguigu.tingshu.album.mapper.AlbumStatMapper;
-import com.atguigu.tingshu.album.mapper.BaseCategoryViewMapper;
 import com.atguigu.tingshu.album.mapper.TrackInfoMapper;
 import com.atguigu.tingshu.album.service.AlbumAttributeValueService;
 import com.atguigu.tingshu.album.service.AlbumInfoService;
-import com.atguigu.tingshu.common.constant.SystemConstant;
+import com.atguigu.tingshu.album.service.VodService;
+import com.atguigu.tingshu.common.rabbit.constant.MqConst;
+import com.atguigu.tingshu.common.rabbit.service.RabbitService;
 import com.atguigu.tingshu.common.util.AuthContextHolder;
-import com.atguigu.tingshu.model.album.*;
+import com.atguigu.tingshu.model.album.AlbumAttributeValue;
+import com.atguigu.tingshu.model.album.AlbumInfo;
+import com.atguigu.tingshu.model.album.AlbumStat;
+import com.atguigu.tingshu.model.album.TrackInfo;
 import com.atguigu.tingshu.query.album.AlbumInfoQuery;
 import com.atguigu.tingshu.vo.album.AlbumAttributeValueVo;
 import com.atguigu.tingshu.vo.album.AlbumInfoVo;
 import com.atguigu.tingshu.vo.album.AlbumListVo;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,7 +27,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static com.atguigu.tingshu.common.constant.SystemConstant.*;
@@ -46,6 +45,10 @@ public class AlbumInfoServiceImpl extends ServiceImpl<AlbumInfoMapper, AlbumInfo
     private AlbumStatMapper albumStatMapper;
     @Autowired
     private TrackInfoMapper trackInfoMapper;
+    @Autowired
+    private VodService vodService;
+    @Autowired
+    private RabbitService rabbitService;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -80,6 +83,19 @@ public class AlbumInfoServiceImpl extends ServiceImpl<AlbumInfoMapper, AlbumInfo
         this.saveAlbumInfoStat(albumInfoId, ALBUM_STAT_SUBSCRIBE, 0);
         this.saveAlbumInfoStat(albumInfoId, ALBUM_STAT_BUY, 0);
         this.saveAlbumInfoStat(albumInfoId, ALBUM_STAT_COMMENT, 0);
+        //进行文本审核
+        String text = albumInfo.getAlbumTitle() + albumInfo.getAlbumIntro();
+        String suggestion = vodService.AuditText(text);
+        if ("block".equals(suggestion)) {
+            albumInfo.setStatus(ALBUM_STATUS_NO_PASS);
+        } else if ("review".equals(suggestion)) {
+            albumInfo.setStatus(ALBUM_STATUS_ARTIFICIAL);
+        } else if ("pass".equals(suggestion)) {
+            albumInfo.setStatus(ALBUM_STATUS_PASS);
+            //TODO 对审核通过的专辑进行上架
+            rabbitService.sendMessage(MqConst.EXCHANGE_ALBUM, MqConst.ROUTING_ALBUM_UPPER, albumInfoId);
+        }
+        albumInfoMapper.updateById(albumInfo);
     }
 
     @Override
@@ -169,6 +185,21 @@ public class AlbumInfoServiceImpl extends ServiceImpl<AlbumInfoMapper, AlbumInfo
         //2.2删除专辑属性值关联表信息根据专辑id
         albumAttributeValueService.remove(new LambdaQueryWrapper<AlbumAttributeValue>().eq(AlbumAttributeValue::getAlbumId, id));
         albumAttributeValueService.saveBatch(albumAttributeValueList);
+        //进行文本审核
+        String text = albumInfo.getAlbumTitle() + albumInfo.getAlbumIntro();
+        String suggestion = vodService.AuditText(text);
+        if ("block".equals(suggestion)) {
+            albumInfo.setStatus(ALBUM_STATUS_NO_PASS);
+            //TODO 如果修改后审核不通过了则进行下架
+            rabbitService.sendMessage(MqConst.EXCHANGE_ALBUM, MqConst.ROUTING_ALBUM_LOWER, id);
+        } else if ("review".equals(suggestion)) {
+            albumInfo.setStatus(ALBUM_STATUS_ARTIFICIAL);
+        } else if ("pass".equals(suggestion)) {
+            albumInfo.setStatus(ALBUM_STATUS_PASS);
+            //TODO 对修改后审核通过的专辑进行上架
+            rabbitService.sendMessage(MqConst.EXCHANGE_ALBUM, MqConst.ROUTING_ALBUM_UPPER, id);
+        }
+        albumInfoMapper.updateById(albumInfo);
     }
 
     /**

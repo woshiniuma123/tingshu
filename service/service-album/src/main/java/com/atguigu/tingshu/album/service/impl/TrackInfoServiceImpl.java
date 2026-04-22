@@ -19,6 +19,7 @@ import com.atguigu.tingshu.vo.album.TrackInfoVo;
 import com.atguigu.tingshu.vo.album.TrackListVo;
 import com.atguigu.tingshu.vo.album.TrackMediaInfoVo;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.qcloud.vod.VodUploadClient;
@@ -118,6 +119,22 @@ public class TrackInfoServiceImpl extends ServiceImpl<TrackInfoMapper, TrackInfo
             this.saveTrackStat(trackInfoId, TRACK_STAT_COLLECT, 0);
             this.saveTrackStat(trackInfoId, TRACK_STAT_PRAISE, 0);
             this.saveTrackStat(trackInfoId, TRACK_STAT_COMMENT, 0);
+            //进行文本审核
+            String text = trackInfo.getTrackTitle() + trackInfo.getTrackIntro();
+            String suggestion = vodService.AuditText(text);
+            if ("block".equals(suggestion)) {
+                trackInfo.setStatus(ALBUM_STATUS_NO_PASS);
+            } else if ("review".equals(suggestion)) {
+                trackInfo.setStatus(ALBUM_STATUS_ARTIFICIAL);
+            } else if ("pass".equals(suggestion)) {
+                trackInfo.setStatus(ALBUM_STATUS_PASS);
+                //TODO 对声音进行审核
+                //发起异步审核任务
+                String taskId = vodService.auditMedia(trackInfo.getMediaFileId());
+                trackInfo.setReviewTaskId(taskId);
+                trackInfo.setStatus(TRACK_STATUS_REVIEWING);
+            }
+            trackInfoMapper.updateById(trackInfo);
         } catch (Exception e) {
             throw new GuiguException(500, "保存声音信息及其相关信息失败");
         }
@@ -136,6 +153,7 @@ public class TrackInfoServiceImpl extends ServiceImpl<TrackInfoMapper, TrackInfo
         trackStat.setTrackId(trackId);
         trackStat.setStatType(statType);
         trackStat.setStatNum(statNum);
+
         trackStatMapper.insert(trackStat);
     }
 
@@ -156,4 +174,94 @@ public class TrackInfoServiceImpl extends ServiceImpl<TrackInfoMapper, TrackInfo
         pageInfo = trackInfoMapper.findUserTrackPage(pageInfo, trackInfoQuery);
         return pageInfo;
     }
+
+    /**
+     * 根据声音的id查询声音信息
+     *
+     * @param id
+     * @return
+     */
+    @Override
+    public TrackInfo getTrackInfoById(Long id) {
+        TrackInfo trackInfo = trackInfoMapper.selectById(id);
+        return trackInfo;
+    }
+
+    /**
+     * 修改声音的信息
+     *
+     * @param id
+     * @param trackInfoVo
+     */
+    @Override
+    public void updateTrackInfo(Long id, TrackInfo trackInfo) {
+        boolean isNeedUpdate = false;
+        //1.根据id获取到库中的声音信息
+        TrackInfo oldTrackInfo = trackInfoMapper.selectById(id);
+        //如果满足则说明声音更新了，获取更新后的声音的文件大小，类型，时长
+        if (!trackInfo.getMediaFileId().equals(oldTrackInfo.getMediaFileId())) {
+            TrackMediaInfoVo mediaInfo = vodService.getMediaInfo(trackInfo.getMediaFileId());
+            if (mediaInfo != null) {
+                trackInfo.setMediaDuration(BigDecimal.valueOf(mediaInfo.getDuration()));
+                trackInfo.setMediaType(mediaInfo.getType());
+                trackInfo.setMediaSize(mediaInfo.getSize());
+                trackInfo.setMediaUrl(mediaInfo.getMediaUrl());
+                trackInfo.setMediaFileId(trackInfo.getMediaFileId());
+                //删除腾讯云点播中的旧文件
+                vodService.deleteOldMedia(oldTrackInfo.getMediaFileId());
+                isNeedUpdate = true;
+            }
+        }
+
+        //对文本内容和声音内容进行再次审核
+        //进行文本审核
+        String text = trackInfo.getTrackTitle() + trackInfo.getTrackIntro();
+        String suggestion = vodService.AuditText(text);
+        if ("block".equals(suggestion)) {
+            trackInfo.setStatus(TRACK_STATUS_NO_PASS);
+        } else if ("review".equals(suggestion)) {
+            trackInfo.setStatus(TRACK_STATUS_ARTIFICIAL);
+        } else if ("pass".equals(suggestion)) {
+            trackInfo.setStatus(TRACK_STATUS_PASS);
+            //对声音进行审核
+            if (isNeedUpdate) {
+                //发起异步审核任务
+                String taskId = vodService.auditMedia(trackInfo.getMediaFileId());
+                trackInfo.setReviewTaskId(taskId);
+                trackInfo.setStatus(TRACK_STATUS_REVIEWING);
+            }
+        }
+
+        trackInfoMapper.updateById(trackInfo);
+    }
+
+    /**
+     * 根据id删除声音及其相关信息
+     *
+     * @param id
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void removeTrackInfo(Long id) {
+        //1.根据声音id查询声音信息
+        TrackInfo trackInfo = trackInfoMapper.selectById(id);
+        Long albumId = trackInfo.getAlbumId();
+        Integer orderNum = trackInfo.getOrderNum();
+        //2.更新专辑表中的声音数量
+        AlbumInfo albumInfo = albumInfoMapper.selectById(albumId);
+        albumInfo.setIncludeTrackCount(albumInfo.getIncludeTrackCount() - 1);
+        albumInfoMapper.updateById(albumInfo);
+        //3.更新声音表中大于当前orderNum的声音的信息
+        trackInfoMapper.update(null, new LambdaUpdateWrapper<TrackInfo>()
+                .eq(TrackInfo::getAlbumId, albumId)
+                .gt(TrackInfo::getOrderNum, orderNum)
+                .setSql("order_num = order_num - 1"));
+        trackInfoMapper.deleteById(id);
+        //4.根据声音id删除声音统计表中的信息
+        trackStatMapper.delete(new LambdaQueryWrapper<TrackStat>().eq(TrackStat::getTrackId, id));
+        //5.删除腾讯云点播平台的相关文件
+        vodService.deleteOldMedia(trackInfo.getMediaFileId());
+
+    }
+
 }

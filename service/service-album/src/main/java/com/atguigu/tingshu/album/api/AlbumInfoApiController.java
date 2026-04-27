@@ -8,6 +8,7 @@ import com.atguigu.tingshu.model.album.AlbumInfo;
 import com.atguigu.tingshu.query.album.AlbumInfoQuery;
 import com.atguigu.tingshu.vo.album.AlbumInfoVo;
 import com.atguigu.tingshu.vo.album.AlbumListVo;
+import com.atguigu.tingshu.vo.album.AlbumStatVo;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import io.swagger.v3.oas.annotations.Operation;
@@ -75,6 +76,13 @@ public class AlbumInfoApiController {
         Long userId = AuthContextHolder.getUserId();
         List<AlbumInfo> albumInfoList = albumInfoService.findUserAllAlbumList(userId);
         return Result.ok(albumInfoList);
+    }
+
+    @Operation(summary = "根据专辑id查询专辑的统计信息")
+    @GetMapping("/albumInfo/getAlbumStatVo/{albumId}")
+    public Result<AlbumStatVo> getAlbumStatVo(@PathVariable Long albumId) {
+        AlbumStatVo albumStatVo = albumInfoService.getAlbumStatVo(albumId);
+        return Result.ok(albumStatVo);
     }
 }
 

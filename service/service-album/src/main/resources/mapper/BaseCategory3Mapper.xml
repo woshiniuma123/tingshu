@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+
+
+<mapper namespace="com.atguigu.tingshu.album.mapper.BaseCategory3Mapper">
+
+
+    <select id="findTopBaseCategory3" resultType="com.atguigu.tingshu.model.album.BaseCategory3">
+        select b3.id,
+               b3.name,
+               b3.category2_id,
+               b3.order_num,
+               b3.is_top,
+               b3.create_time
+        from base_category1 b1
+                 inner join base_category2 b2 on b1.id = b2.category1_id
+                 inner join base_category3 b3 on b2.id = b3.category2_id
+        where b3.is_deleted = 0
+          and b1.id = #{category1Id}
+        order by b3.order_num
+        limit 7
+    </select>
+</mapper>
+

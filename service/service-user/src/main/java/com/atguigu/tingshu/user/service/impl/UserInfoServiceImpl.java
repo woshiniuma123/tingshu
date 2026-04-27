@@ -53,14 +53,14 @@ public class UserInfoServiceImpl extends ServiceImpl<UserInfoMapper, UserInfo> i
             UserInfo userInfo = userInfoMapper.selectOne(new LambdaQueryWrapper<UserInfo>().eq(UserInfo::getWxOpenId, openid));
             if (userInfo == null) {
                 //如果用户为空则创建一个新用户
-                UserInfo user = new UserInfo();
-                user.setWxOpenId(openid);
-                user.setNickname("用户" + UUID.randomUUID());
-                user.setAvatarUrl("http://192.168.200.6:9000/tingshu/2026-04-20/2d023779007f4774bac5195b7c614a41.png");
-                userInfoMapper.insert(user);
+                userInfo = new UserInfo();
+                userInfo.setWxOpenId(openid);
+                userInfo.setNickname("用户" + UUID.randomUUID());
+                userInfo.setAvatarUrl("http://192.168.200.6:9000/tingshu/2026-04-20/2d023779007f4774bac5195b7c614a41.png");
+                userInfoMapper.insert(userInfo);
                 //TODO 2.添加用户的账户信息 采用异步方式
                 HashMap<String, Object> msg = new HashMap<>();
-                msg.put("userId", user.getId());
+                msg.put("userId", userInfo.getId());
                 msg.put("amount", 100);
                 msg.put("title", "新用户赠送");
                 msg.put("orderNo", "ZS" + IdUtil.getSnowflake());

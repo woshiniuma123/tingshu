@@ -1,12 +1,14 @@
 package com.atguigu.tingshu.album.service.impl;
 
-import com.alibaba.fastjson.JSON;
+import cn.hutool.core.collection.CollectionUtil;
 import com.alibaba.fastjson.JSONObject;
 import com.atguigu.tingshu.album.mapper.*;
 import com.atguigu.tingshu.album.service.BaseCategoryService;
 import com.atguigu.tingshu.model.album.BaseAttribute;
 import com.atguigu.tingshu.model.album.BaseCategory1;
+import com.atguigu.tingshu.model.album.BaseCategory3;
 import com.atguigu.tingshu.model.album.BaseCategoryView;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -14,6 +16,7 @@ import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -103,5 +106,62 @@ public class BaseCategoryServiceImpl extends ServiceImpl<BaseCategory1Mapper, Ba
     public BaseCategoryView getCategoryViewByCategory3Id(Long category3Id) {
         BaseCategoryView baseCategoryView = baseCategoryViewMapper.getCategoryViewByCategory3Id(category3Id);
         return baseCategoryView;
+    }
+
+    /**
+     * 根据分类1的id查询分类3的信息
+     *
+     * @param category1Id
+     * @return
+     */
+    @Override
+    public List<BaseCategory3> findTopBaseCategory3(Long category1Id) {
+        List<BaseCategory3> baseCategory3 = baseCategory3Mapper.findTopBaseCategory3(category1Id);
+        return baseCategory3;
+    }
+
+    /**
+     * 根据分类1的id查询其
+     *
+     * @param category1Id
+     * @return
+     */
+    @Override
+    public JSONObject getBaseCategoryListByCategory1Id(Long category1Id) {
+
+        //1.查询当前分类id的全部分类信息
+        List<BaseCategoryView> baseCategory1Views = baseCategoryViewMapper.selectList(new LambdaQueryWrapper<BaseCategoryView>()
+                .eq(BaseCategoryView::getCategory1Id, category1Id));
+        if (CollectionUtil.isNotEmpty(baseCategory1Views)) {
+            //2创建分类1的对象
+            JSONObject jsonObject1 = new JSONObject();
+            jsonObject1.put("categoryId", baseCategory1Views.get(0).getCategory1Id());
+            jsonObject1.put("categoryName", baseCategory1Views.get(0).getCategory1Name());
+            //3.根据分类2id进行分组
+            Map<Long, List<BaseCategoryView>> group1 = baseCategory1Views.stream().collect(Collectors.groupingBy(BaseCategoryView::getCategory2Id));
+            Set<Map.Entry<Long, List<BaseCategoryView>>> entries1 = group1.entrySet();
+            //4.构建分类2的集合列表
+            ArrayList<JSONObject> jsonObject2List = new ArrayList<>();
+            for (Map.Entry<Long, List<BaseCategoryView>> entry1 : entries1) {
+                JSONObject jsonObject2 = new JSONObject();
+                jsonObject2.put("categoryId", entry1.getKey());
+                jsonObject2.put("categoryName", entry1.getValue().get(0).getCategory2Name());
+                //构建三级分类列表
+                ArrayList<JSONObject> jsonObjects3List = new ArrayList<>();
+                for (BaseCategoryView baseCategoryView : entry1.getValue()) {
+                    JSONObject jsonObject3 = new JSONObject();
+                    jsonObject3.put("categoryId", baseCategoryView.getCategory3Id());
+                    jsonObject3.put("categoryName", baseCategoryView.getCategory3Name());
+                    jsonObjects3List.add(jsonObject3);
+                }
+                //5.给分类2添加分类3的集合列表
+                jsonObject2.put("categoryChild", jsonObjects3List);
+                //6.将每个分类2的对象添加到分类2列表
+                jsonObject2List.add(jsonObject2);
+            }
+            jsonObject1.put("categoryChild", jsonObject2List);
+            return jsonObject1;
+        }
+        return null;
     }
 }

@@ -1,5 +1,25 @@
 package com.atguigu.tingshu.user.service;
 
-public interface UserListenProcessService {
+import com.atguigu.tingshu.vo.user.UserListenProcessVo;
 
+import java.math.BigDecimal;
+
+public interface UserListenProcessService {
+    /**
+     * 从mongo中获取上次声音的进度
+     *
+     * @param trackId
+     * @return
+     */
+    BigDecimal getTrackBreakSecond(Long trackId);
+
+    /**
+     * 获取mongo集合的名称
+     *
+     * @param userId
+     * @return
+     */
+    String getCollectionName(Long userId);
+
+    void updateListenProcess(UserListenProcessVo userListenProcessVo);
 }

@@ -125,7 +125,6 @@ public class SearchServiceImpl implements SearchService {
             albumInfoIndex.setHotScore(hotScore);
         }, threadPoolTaskExecutor);
 
-
         CompletableFuture.allOf(albumInfoCompletableFuture, baseCategoryComoletableFuture, UserInfoCompletableFuture, StatCompletableFuture).orTimeout(3, TimeUnit.SECONDS).join();
         //5.将封装好的信息加入索引库当中
         albumInfoIndexRepository.save(albumInfoIndex);

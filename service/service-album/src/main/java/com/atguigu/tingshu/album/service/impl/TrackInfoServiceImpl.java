@@ -4,6 +4,7 @@ import cn.hutool.core.bean.BeanUtil;
 import com.alibaba.nacos.common.utils.StringUtils;
 import com.atguigu.tingshu.album.config.VodConstantProperties;
 import com.atguigu.tingshu.album.mapper.AlbumInfoMapper;
+import com.atguigu.tingshu.album.mapper.AlbumStatMapper;
 import com.atguigu.tingshu.album.mapper.TrackInfoMapper;
 import com.atguigu.tingshu.album.mapper.TrackStatMapper;
 import com.atguigu.tingshu.album.service.TrackInfoService;
@@ -12,12 +13,13 @@ import com.atguigu.tingshu.common.execption.GuiguException;
 import com.atguigu.tingshu.common.util.AuthContextHolder;
 import com.atguigu.tingshu.common.util.UploadFileUtil;
 import com.atguigu.tingshu.model.album.AlbumInfo;
+import com.atguigu.tingshu.model.album.AlbumStat;
 import com.atguigu.tingshu.model.album.TrackInfo;
 import com.atguigu.tingshu.model.album.TrackStat;
 import com.atguigu.tingshu.query.album.TrackInfoQuery;
-import com.atguigu.tingshu.vo.album.TrackInfoVo;
-import com.atguigu.tingshu.vo.album.TrackListVo;
-import com.atguigu.tingshu.vo.album.TrackMediaInfoVo;
+import com.atguigu.tingshu.user.client.UserFeignClient;
+import com.atguigu.tingshu.vo.album.*;
+import com.atguigu.tingshu.vo.user.UserInfoVo;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -32,7 +34,10 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
+import java.util.Date;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import static com.atguigu.tingshu.common.constant.SystemConstant.*;
 
@@ -264,4 +269,115 @@ public class TrackInfoServiceImpl extends ServiceImpl<TrackInfoMapper, TrackInfo
 
     }
 
+    @Autowired
+    private UserFeignClient userFeignClient;
+
+    /**
+     * 分页查询专辑下的声音信息
+     *
+     * @param albumId
+     * @param pageInfo
+     * @return
+     */
+    @Override
+    public Page<AlbumTrackListVo> findAlbumTrackPage(Long albumId, Page<AlbumTrackListVo> pageInfo) {
+
+        Long userId = AuthContextHolder.getUserId();
+        Page<AlbumTrackListVo> trackListVoPage = trackInfoMapper.findAlbumTrackPage(albumId, pageInfo);
+
+
+        //通过专辑id去查询该专辑的免费集数
+        AlbumInfo albumInfo = albumInfoMapper.selectById(albumId);
+        Integer tracksForFree = albumInfo.getTracksForFree();
+        List<AlbumTrackListVo> albumTrackListVoList = trackListVoPage.getRecords();
+        String payType = albumInfo.getPayType();
+        //1.2将除了免费的集数的isShowPaidMark设置为true，也就是显示付费标识
+        //1。如果用户未登录
+        if (userId == null) {
+            if (ALBUM_PAY_TYPE_REQUIRE.equals(payType) || ALBUM_PAY_TYPE_VIPFREE.equals(payType)) {
+                albumTrackListVoList
+                        .stream()
+                        .filter(albumTrackListVo -> albumTrackListVo.getOrderNum() > tracksForFree)
+                        .forEach(albumTrackListVo -> albumTrackListVo.setIsShowPaidMark(true));
+                trackListVoPage.setRecords(albumTrackListVoList);
+                return trackListVoPage;
+            }
+        } else {
+            //用户登录的情况
+            //1.远程调用用户微服务获取用户的信息
+            UserInfoVo userInfo = userFeignClient.getUserInfo(userId).getData();
+            Boolean isVip = false;
+            if (userInfo.getIsVip().intValue() == 1 && userInfo.getVipExpireTime().after(new Date())) {
+                //2.用户是vip用户
+                isVip = true;
+            }
+            //3.如果用户不是vip并且专辑还是vip免费的，就查看用户的专辑或声音的购买情况
+            Boolean isNeedCheckPayState = false;
+            if (!isVip && ALBUM_PAY_TYPE_VIPFREE.equals(payType)) {
+                isNeedCheckPayState = true;
+            }
+            //4.如果该专辑是付费的 所有用户都要检查购买状态
+            if (ALBUM_PAY_TYPE_REQUIRE.equals(payType)) {
+                isNeedCheckPayState = true;
+            }
+            if (isNeedCheckPayState) {
+                //5.调用远程微服务获取当前用户声音购买情况
+                //5.1获取免费声音之外的声音
+                List<Long> trackIdList = albumTrackListVoList.stream()
+                        .filter(trackVo -> trackVo.getOrderNum() > tracksForFree)
+                        .map(trackVo -> trackVo.getTrackId()).collect(Collectors.toList());
+
+                Map<Long, Integer> trackIsPaidMap =
+                        userFeignClient.userIsPaidTrack(userId, albumId, trackIdList).getData();
+
+                albumTrackListVoList
+                        .stream()
+                        .filter(albumTrackListVo -> albumTrackListVo.getOrderNum() > tracksForFree)
+                        .forEach(albumTrackListVo ->
+                                albumTrackListVo.setIsShowPaidMark(trackIsPaidMap.get(albumTrackListVo.getTrackId()) == 0));
+                pageInfo.setRecords(albumTrackListVoList);
+            }
+
+        }
+        return trackListVoPage;
+    }
+
+    @Autowired
+    private AlbumStatMapper albumStatMapper;
+
+    /**
+     * 更新声音和专辑的统计信息
+     *
+     * @param trackStatMqVo
+     */
+    @Override
+    public void updateTrackStat(TrackStatMqVo trackStatMqVo) {
+        //1.更新声音统计信息
+        trackStatMapper.update(null,
+                new LambdaUpdateWrapper<TrackStat>()
+                        .eq(TrackStat::getTrackId, trackStatMqVo.getTrackId())
+                        .eq(TrackStat::getStatType, trackStatMqVo.getStatType())
+                        .setSql("stat_num=stat_num+" + trackStatMqVo.getCount())
+        );
+        //2.如果声音统计信息的类型是播放量,更新专辑的统计信息
+        if (TRACK_STAT_PLAY.equals(trackStatMqVo.getStatType())) {
+            albumStatMapper.update(null,
+                    new LambdaUpdateWrapper<AlbumStat>()
+                            .eq(AlbumStat::getAlbumId, trackStatMqVo.getAlbumId())
+                            .eq(AlbumStat::getStatType, ALBUM_STAT_PLAY)
+                            .setSql("stat_num=stat_num+" + trackStatMqVo.getCount())
+            );
+        }
+        //3.如果是评论类型的需要更新专辑的评论统计信息
+        if (TRACK_STAT_COMMENT.equals(trackStatMqVo.getStatType())) {
+            albumStatMapper.update(null,
+                    new LambdaUpdateWrapper<AlbumStat>()
+                            .eq(AlbumStat::getAlbumId, trackStatMqVo.getAlbumId())
+                            .eq(AlbumStat::getStatType, ALBUM_STAT_COMMENT)
+                            .setSql("stat_num=stat_num+" + trackStatMqVo.getCount())
+            );
+        }
+    }
 }
+
+

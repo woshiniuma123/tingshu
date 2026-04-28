@@ -5,8 +5,10 @@ import com.atguigu.tingshu.common.login.GuiGuLogin;
 import com.atguigu.tingshu.common.result.Result;
 import com.atguigu.tingshu.model.album.TrackInfo;
 import com.atguigu.tingshu.query.album.TrackInfoQuery;
+import com.atguigu.tingshu.vo.album.AlbumTrackListVo;
 import com.atguigu.tingshu.vo.album.TrackInfoVo;
 import com.atguigu.tingshu.vo.album.TrackListVo;
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -76,6 +78,17 @@ public class TrackInfoApiController {
     public Result removeTrackInfo(@PathVariable Long id) {
         trackInfoService.removeTrackInfo(id);
         return Result.ok();
+    }
+
+    @GuiGuLogin(required = false)
+    @Operation(summary = "查询声音分页列表")
+    @GetMapping("/trackInfo/findAlbumTrackPage/{albumId}/{page}/{limit}")
+    public Result<IPage<AlbumTrackListVo>> findAlbumTrackPage(@PathVariable Long albumId, @PathVariable Integer page, @PathVariable Integer limit) {
+        Page<AlbumTrackListVo> pageInfo = new Page<>(page, limit);
+        pageInfo = trackInfoService.findAlbumTrackPage(albumId, pageInfo);
+
+        return Result.ok(pageInfo);
+
     }
 }
 

@@ -33,5 +33,23 @@
         order by ti.id desc
 
     </select>
+    <select id="findAlbumTrackPage" resultType="com.atguigu.tingshu.vo.album.AlbumTrackListVo">
+        select ti.id                                          as trackId,
+               ti.track_title,
+               ti.media_duration,
+               ti.order_num,
+               ti.create_time,
+               max(if(ts.stat_type = '0701', ts.stat_num, 0)) as playStatNum,
+               max(if(ts.stat_type = '0704', ts.stat_num, 0)) as commentStatNum
+        from track_info ti
+                 inner join track_stat ts on ts.track_id = ti.id
+        where ti.album_id = #{albumId}
+          and ti.status = '0501'
+          and ti.is_deleted = 0
+        group by ti.id
+        order by ti.order_num asc
+    </select>
+
+
 </mapper>
 

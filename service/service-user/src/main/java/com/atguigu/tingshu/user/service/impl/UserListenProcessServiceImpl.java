@@ -14,6 +14,7 @@ import com.atguigu.tingshu.vo.album.TrackStatMqVo;
 import com.atguigu.tingshu.vo.user.UserListenProcessVo;
 import com.mongodb.client.MongoClient;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
@@ -23,6 +24,8 @@ import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 @Service
@@ -126,6 +129,30 @@ public class UserListenProcessServiceImpl implements UserListenProcessService {
             }
 
         }
+    }
+
+    /**
+     * '获取用户最近一次播放的声音记录
+     *
+     * @param userId
+     * @return
+     */
+    @Override
+    public Map<String, Long> getLatelyTrack(Long userId) {
+        HashMap<String, Long> map = new HashMap<>();
+        String collectionName = this.getCollectionName(userId);
+        Query query = new Query();
+        query.addCriteria(Criteria.where("userId").is(userId));
+        query.with(Sort.by(Sort.Direction.DESC, "createTime"));
+
+        UserListenProcess userListenProcess = mongoTemplate.findOne(query, UserListenProcess.class, collectionName);
+
+        if (userListenProcess != null) {
+            map.put("trackId", userListenProcess.getTrackId());
+            map.put("albumId", userListenProcess.getAlbumId());
+            return map;
+        }
+        return map;
     }
 
 

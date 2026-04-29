@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+
+
+<mapper namespace="com.atguigu.tingshu.album.mapper.TrackStatMapper">
+
+
+    <select id="getTrackStatVo" resultType="com.atguigu.tingshu.vo.album.TrackStatVo">
+        select max(if(stat_type = '0701', stat_num, 0)) as playStatNum,
+               max(if(stat_type = '0702', stat_num, 0)) as collectStatNum,
+               max(if(stat_type = '0703', stat_num, 0)) as praiseStatNum,
+               max(if(stat_type = '0704', stat_num, 0)) as commentStatNum
+        from track_stat
+        where track_id = #{trackId}
+    </select>
+</mapper>
+

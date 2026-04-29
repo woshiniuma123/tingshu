@@ -3,6 +3,7 @@ package com.atguigu.tingshu.user.service;
 import com.atguigu.tingshu.vo.user.UserListenProcessVo;
 
 import java.math.BigDecimal;
+import java.util.Map;
 
 public interface UserListenProcessService {
     /**
@@ -22,4 +23,6 @@ public interface UserListenProcessService {
     String getCollectionName(Long userId);
 
     void updateListenProcess(UserListenProcessVo userListenProcessVo);
+
+    Map<String, Long> getLatelyTrack(Long userId);
 }

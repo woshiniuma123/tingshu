@@ -4,6 +4,7 @@ import com.alibaba.fastjson.JSONObject;
 import com.atguigu.tingshu.album.impl.AlbumDegradeFeignClient;
 import com.atguigu.tingshu.common.result.Result;
 import com.atguigu.tingshu.model.album.AlbumInfo;
+import com.atguigu.tingshu.model.album.BaseCategory1;
 import com.atguigu.tingshu.model.album.BaseCategory3;
 import com.atguigu.tingshu.model.album.BaseCategoryView;
 import com.atguigu.tingshu.vo.album.AlbumStatVo;
@@ -37,4 +38,7 @@ public interface AlbumFeignClient {
 
     @GetMapping("/albumInfo/getAlbumStatVo/{albumId}")
     public Result<AlbumStatVo> getAlbumStatVo(@PathVariable Long albumId);
+
+    @GetMapping("/category/findAllCategory1")
+    public Result<List<BaseCategory1>> findAllCategory1();
 }

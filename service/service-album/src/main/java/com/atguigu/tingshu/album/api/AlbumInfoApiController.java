@@ -1,10 +1,12 @@
 package com.atguigu.tingshu.album.api;
 
+import com.atguigu.tingshu.album.mapper.BaseCategory1Mapper;
 import com.atguigu.tingshu.album.service.AlbumInfoService;
 import com.atguigu.tingshu.common.login.GuiGuLogin;
 import com.atguigu.tingshu.common.result.Result;
 import com.atguigu.tingshu.common.util.AuthContextHolder;
 import com.atguigu.tingshu.model.album.AlbumInfo;
+import com.atguigu.tingshu.model.album.BaseCategory1;
 import com.atguigu.tingshu.query.album.AlbumInfoQuery;
 import com.atguigu.tingshu.vo.album.AlbumInfoVo;
 import com.atguigu.tingshu.vo.album.AlbumListVo;
@@ -27,6 +29,8 @@ public class AlbumInfoApiController {
 
     @Autowired
     private AlbumInfoService albumInfoService;
+    @Autowired
+    private BaseCategory1Mapper baseCategory1Mapper;
 
     @GuiGuLogin
     @Operation(summary = "保存专辑信息")
@@ -84,5 +88,7 @@ public class AlbumInfoApiController {
         AlbumStatVo albumStatVo = albumInfoService.getAlbumStatVo(albumId);
         return Result.ok(albumStatVo);
     }
+
+
 }
 

@@ -378,6 +378,18 @@ public class TrackInfoServiceImpl extends ServiceImpl<TrackInfoMapper, TrackInfo
             );
         }
     }
+
+    /**
+     * 获取声音的统计信息
+     *
+     * @param trackId
+     * @return
+     */
+    @Override
+    public TrackStatVo getTrackStatVo(Long trackId) {
+        TrackStatVo trackStatVo = trackStatMapper.getTrackStatVo(trackId);
+        return trackStatVo;
+    }
 }
 
 

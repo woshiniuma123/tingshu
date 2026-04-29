@@ -8,6 +8,7 @@ import com.atguigu.tingshu.query.album.TrackInfoQuery;
 import com.atguigu.tingshu.vo.album.AlbumTrackListVo;
 import com.atguigu.tingshu.vo.album.TrackInfoVo;
 import com.atguigu.tingshu.vo.album.TrackListVo;
+import com.atguigu.tingshu.vo.album.TrackStatVo;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import io.swagger.v3.oas.annotations.Operation;
@@ -88,7 +89,13 @@ public class TrackInfoApiController {
         pageInfo = trackInfoService.findAlbumTrackPage(albumId, pageInfo);
 
         return Result.ok(pageInfo);
+    }
 
+    @Operation(summary = "获取声音的统计信息")
+    @GetMapping("/trackInfo/getTrackStatVo/{trackId}")
+    public Result<TrackStatVo> getTrackStatVo(@PathVariable Long trackId) {
+        TrackStatVo trackStatVo = trackInfoService.getTrackStatVo(trackId);
+        return Result.ok(trackStatVo);
     }
 }
 

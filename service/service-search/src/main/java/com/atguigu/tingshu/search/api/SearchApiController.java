@@ -3,6 +3,7 @@ package com.atguigu.tingshu.search.api;
 import com.atguigu.tingshu.common.result.Result;
 import com.atguigu.tingshu.query.search.AlbumIndexQuery;
 import com.atguigu.tingshu.search.service.SearchService;
+import com.atguigu.tingshu.vo.search.AlbumInfoIndexVo;
 import com.atguigu.tingshu.vo.search.AlbumSearchResponseVo;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -53,5 +54,23 @@ public class SearchApiController {
         return Result.ok(list);
     }
 
+    @Operation(summary = "根据一级分类和查询标识获取专辑排行榜")
+    @GetMapping("/albumInfo/findRankingList/{category1Id}/{dimension}")
+    public Result<List<AlbumInfoIndexVo>> findRankingList(@PathVariable Long category1Id, @PathVariable String dimension) {
+        List<AlbumInfoIndexVo> albumInfoIndexList = searchService.findRankingList(category1Id, dimension);
+        return Result.ok(albumInfoIndexList);
+    }
+
+    /**
+     * 更新所有分类下的所有标识的排行榜
+     *
+     * @return
+     */
+    @Operation(summary = "更新所有分类下的排行榜")
+    @GetMapping("/albumInfo/updateLatelyAlbumRanking")
+    public Result updateLatelyAlbumRanking() {
+        searchService.updateLatelyAlbumRanking();
+        return Result.ok();
+    }
 }
 

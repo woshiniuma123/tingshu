@@ -19,11 +19,9 @@ import co.elastic.clients.json.JsonData;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.nacos.common.utils.StringUtils;
 import com.atguigu.tingshu.album.AlbumFeignClient;
+import com.atguigu.tingshu.common.constant.RedisConstant;
 import com.atguigu.tingshu.common.execption.GuiguException;
-import com.atguigu.tingshu.model.album.AlbumAttributeValue;
-import com.atguigu.tingshu.model.album.AlbumInfo;
-import com.atguigu.tingshu.model.album.BaseCategory3;
-import com.atguigu.tingshu.model.album.BaseCategoryView;
+import com.atguigu.tingshu.model.album.*;
 import com.atguigu.tingshu.model.search.AlbumInfoIndex;
 import com.atguigu.tingshu.model.search.AttributeValueIndex;
 import com.atguigu.tingshu.model.search.SuggestIndex;
@@ -39,6 +37,7 @@ import com.atguigu.tingshu.vo.user.UserInfoVo;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.elasticsearch.core.suggest.Completion;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -429,6 +428,77 @@ public class SearchServiceImpl implements SearchService {
             }
         }
         return list;
+    }
+
+    @Autowired
+    private RedisTemplate redisTemplate;
+
+    /**
+     * 根据一级分类id和排行标识获取到排行榜 从redis中获取数据
+     *
+     * @param category1Id
+     * @param dimension
+     * @return
+     */
+    @Override
+    public List<AlbumInfoIndexVo> findRankingList(Long category1Id, String dimension) {
+        //1.构建redis的key
+        String redisKey = RedisConstant.RANKING_KEY_PREFIX + category1Id;
+        //2.检查该key是否在redis中存在
+        Boolean flag = redisTemplate.hasKey(redisKey);
+        if (flag) {
+            List<AlbumInfoIndex> list = (List<AlbumInfoIndex>) redisTemplate.opsForHash().get(redisKey, dimension);
+            if (CollectionUtil.isNotEmpty(list)) {
+                List<AlbumInfoIndexVo> albumInfoIndexVoList = list.stream().map(albumInfoIndex -> {
+                            AlbumInfoIndexVo albumInfoIndexVo = BeanUtil.copyProperties(albumInfoIndex, AlbumInfoIndexVo.class);
+                            return albumInfoIndexVo;
+                        }
+                ).collect(Collectors.toList());
+                return albumInfoIndexVoList;
+            }
+        }
+        return null;
+    }
+
+
+    /**
+     * 更新所有分类下的排行榜，存入redis中
+     */
+    @Override
+    public void updateLatelyAlbumRanking() {
+        //1.获取所有一级分类的id
+        List<BaseCategory1> baseCategory1List = albumFeignClient.findAllCategory1().getData();
+        //2.获取所有一级分类的id
+        List<Long> category1IdList = baseCategory1List.stream().map(baseCategory1 -> baseCategory1.getId()).collect(Collectors.toList());
+        for (Long category1Id : category1IdList) {
+            String redisKey = RedisConstant.RANKING_KEY_PREFIX + category1Id;
+            //3.构建分类下的查询类型的数组
+            String[] rankingDimensionArray =
+                    new String[]{"hotScore", "playStatNum", "subscribeStatNum", "buyStatNum", "commentStatNum"};
+            for (String demision : rankingDimensionArray) {
+                //4.构建redisKey
+                try {
+                    //5.从es中检索根据条件检索排行前20的数据
+                    SearchResponse<AlbumInfoIndex> response = elasticsearchClient.
+                            search(s -> s.index(INDEX_NAME)
+                                            .query(t -> t.term(t1 -> t1.field("category1Id")
+                                                    .value(category1Id))).size(20)
+                                            .sort(s1 -> s1.field(s2 -> s2.field(demision).order(SortOrder.Desc)))
+                                    , AlbumInfoIndex.class);
+                    //6.解析检索出的结果
+                    List<Hit<AlbumInfoIndex>> hits = response.hits().hits();
+                    if (CollectionUtil.isNotEmpty(hits)) {
+                        List<AlbumInfoIndex> albumInfoIndexList = hits.stream().map(hit -> hit.source()).collect(Collectors.toList());
+                        //7.将检索出的结果存入redis中
+                        redisTemplate.opsForHash().put(redisKey, demision, albumInfoIndexList);
+                    }
+                } catch (IOException e) {
+                    throw new GuiguException(500, "条件检索索引库中排行前20的数据失败");
+                }
+            }
+
+        }
+
     }
 
 

@@ -2,6 +2,7 @@ package com.atguigu.tingshu.user.api;
 
 import com.atguigu.tingshu.common.login.GuiGuLogin;
 import com.atguigu.tingshu.common.result.Result;
+import com.atguigu.tingshu.common.util.AuthContextHolder;
 import com.atguigu.tingshu.user.service.UserListenProcessService;
 import com.atguigu.tingshu.vo.user.UserListenProcessVo;
 import io.swagger.v3.oas.annotations.Operation;
@@ -10,6 +11,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
+import java.util.Map;
 
 @Tag(name = "用户声音播放进度管理接口")
 @RestController
@@ -34,6 +36,18 @@ public class UserListenProcessApiController {
     public Result updateListenProcess(@RequestBody UserListenProcessVo userListenProcessVo) {
         userListenProcessService.updateListenProcess(userListenProcessVo);
         return Result.ok();
+    }
+
+    @Operation(summary = "获取用户最近的播放声音记录")
+    @GuiGuLogin
+    @GetMapping("/userListenProcess/getLatelyTrack")
+    public Result<Map<String, Long>> getLatelyTrack() {
+        Long userId = AuthContextHolder.getUserId();
+        if (userId != null) {
+            Map<String, Long> map = userListenProcessService.getLatelyTrack(userId);
+            return Result.ok(map);
+        }
+        return null;
     }
 }
 

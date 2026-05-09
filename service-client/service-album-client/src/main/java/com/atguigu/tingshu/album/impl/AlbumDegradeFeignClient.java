@@ -4,10 +4,7 @@ package com.atguigu.tingshu.album.impl;
 import com.alibaba.fastjson.JSONObject;
 import com.atguigu.tingshu.album.AlbumFeignClient;
 import com.atguigu.tingshu.common.result.Result;
-import com.atguigu.tingshu.model.album.AlbumInfo;
-import com.atguigu.tingshu.model.album.BaseCategory1;
-import com.atguigu.tingshu.model.album.BaseCategory3;
-import com.atguigu.tingshu.model.album.BaseCategoryView;
+import com.atguigu.tingshu.model.album.*;
 import com.atguigu.tingshu.vo.album.AlbumStatVo;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -53,6 +50,18 @@ public class AlbumDegradeFeignClient implements AlbumFeignClient {
     @Override
     public Result<List<BaseCategory1>> findAllCategory1() {
         log.error("获取所有一级分类失败");
+        return null;
+    }
+
+    @Override
+    public Result<List<TrackInfo>> findPaidTrackInfoList(Long trackId, Integer trackCount) {
+        log.error("获取用户未购买的声音列表失败");
+        return null;
+    }
+
+    @Override
+    public Result<TrackInfo> getTrackInfoById(Long id) {
+        log.error("根据声音id获取声音信息失败");
         return null;
     }
 

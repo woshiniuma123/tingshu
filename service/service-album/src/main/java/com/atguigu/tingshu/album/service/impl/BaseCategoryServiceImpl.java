@@ -4,6 +4,7 @@ import cn.hutool.core.collection.CollectionUtil;
 import com.alibaba.fastjson.JSONObject;
 import com.atguigu.tingshu.album.mapper.*;
 import com.atguigu.tingshu.album.service.BaseCategoryService;
+import com.atguigu.tingshu.common.cache.GuiGuCache;
 import com.atguigu.tingshu.model.album.BaseAttribute;
 import com.atguigu.tingshu.model.album.BaseCategory1;
 import com.atguigu.tingshu.model.album.BaseCategory3;
@@ -37,6 +38,7 @@ public class BaseCategoryServiceImpl extends ServiceImpl<BaseCategory1Mapper, Ba
     @Autowired
     private BaseAttributeMapper baseAttributeMapper;
 
+    @GuiGuCache(prefix = "category:list:")
     @Override
     public List<JSONObject> getBaseCategoryList() {
         List<BaseCategoryView> baseCategoryViews = baseCategoryViewMapper.selectList(null);
@@ -84,6 +86,7 @@ public class BaseCategoryServiceImpl extends ServiceImpl<BaseCategory1Mapper, Ba
         return list1;
     }
 
+    @GuiGuCache(prefix = "attribute:category:")
     @Override
     public List<JSONObject> getAttributeByCategory1Id(Long category1Id) {
 
@@ -102,6 +105,7 @@ public class BaseCategoryServiceImpl extends ServiceImpl<BaseCategory1Mapper, Ba
         return resultList;
     }
 
+
     @Override
     public BaseCategoryView getCategoryViewByCategory3Id(Long category3Id) {
         BaseCategoryView baseCategoryView = baseCategoryViewMapper.getCategoryViewByCategory3Id(category3Id);
@@ -114,6 +118,7 @@ public class BaseCategoryServiceImpl extends ServiceImpl<BaseCategory1Mapper, Ba
      * @param category1Id
      * @return
      */
+
     @Override
     public List<BaseCategory3> findTopBaseCategory3(Long category1Id) {
         List<BaseCategory3> baseCategory3 = baseCategory3Mapper.findTopBaseCategory3(category1Id);
@@ -126,6 +131,7 @@ public class BaseCategoryServiceImpl extends ServiceImpl<BaseCategory1Mapper, Ba
      * @param category1Id
      * @return
      */
+    @GuiGuCache(prefix = "categoryList:category1Id:")
     @Override
     public JSONObject getBaseCategoryListByCategory1Id(Long category1Id) {
 

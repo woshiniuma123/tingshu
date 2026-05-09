@@ -1,8 +1,10 @@
 package com.atguigu.tingshu.user.client;
 
 import com.atguigu.tingshu.common.result.Result;
+import com.atguigu.tingshu.model.user.VipServiceConfig;
 import com.atguigu.tingshu.user.client.impl.UserDegradeFeignClient;
 import com.atguigu.tingshu.vo.user.UserInfoVo;
+import com.atguigu.tingshu.vo.user.UserPaidRecordVo;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -37,4 +39,16 @@ public interface UserFeignClient {
             @PathVariable Long userId,
             @PathVariable Long albumId,
             @RequestBody List<Long> needCheckPayStatusTrackIdList);
+
+    @GetMapping("/vipServiceConfig/getVipServiceConfig/{id}")
+    public Result<VipServiceConfig> getVipServiceConfig(@PathVariable Long id);
+
+    @GetMapping("/userInfo/isPaidAlbum/{albumId}")
+    public Result<Boolean> isPaidAlbum(@PathVariable Long albumId);
+
+    @GetMapping("/userInfo/findUserPaidTrackList/{albumId}")
+    public Result<List<Long>> findUserPaidTrackList(@PathVariable Long albumId);
+
+    @PostMapping("/userInfo/savePaidRecord")
+    public Result savePaidRecord(@RequestBody UserPaidRecordVo userPaidRecordVo);
 }

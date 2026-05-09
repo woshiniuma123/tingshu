@@ -2,6 +2,7 @@ package com.atguigu.tingshu.search.service.impl;
 
 import cn.hutool.core.lang.Assert;
 import com.atguigu.tingshu.album.AlbumFeignClient;
+import com.atguigu.tingshu.common.cache.GuiGuCache;
 import com.atguigu.tingshu.model.album.AlbumInfo;
 import com.atguigu.tingshu.model.album.BaseCategoryView;
 import com.atguigu.tingshu.search.service.ItemService;
@@ -9,6 +10,7 @@ import com.atguigu.tingshu.user.client.UserFeignClient;
 import com.atguigu.tingshu.vo.album.AlbumStatVo;
 import com.atguigu.tingshu.vo.user.UserInfoVo;
 import lombok.extern.slf4j.Slf4j;
+import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -28,6 +30,8 @@ public class ItemServiceImpl implements ItemService {
     private UserFeignClient userFeignClient;
     @Autowired
     private Executor threadPoolTaskExecutor;
+    @Autowired
+    private RedissonClient redissonClient;
 
     /**
      * 根据专辑id获取专辑的信息，主播的信息，专辑统计信息，专辑分类信息
@@ -35,8 +39,10 @@ public class ItemServiceImpl implements ItemService {
      * @param albumId
      * @return
      */
+    @GuiGuCache(prefix = "search:albumItem:")
     @Override
     public Map<String, Object> getAlbumItem(Long albumId) {
+
         Map<String, Object> map = new ConcurrentHashMap<>();
         CompletableFuture<AlbumInfo> albumInfoCompletableFuture = CompletableFuture.supplyAsync(() -> {
             //1.根据专辑id获取专辑信息

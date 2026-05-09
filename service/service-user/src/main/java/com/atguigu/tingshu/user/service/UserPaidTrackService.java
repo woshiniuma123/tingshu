@@ -9,5 +9,7 @@ import java.util.Map;
 public interface UserPaidTrackService extends IService<UserPaidTrack> {
 
 
-    Map<Long, Integer>  userIsPaidTrack(Long userId, Long albumId, List<Long> needCheckPayStatusTrackIdList);
+    Map<Long, Integer> userIsPaidTrack(Long userId, Long albumId, List<Long> needCheckPayStatusTrackIdList);
+
+    List<Long> findUserPaidTrackList(Long albumId, Long userId);
 }

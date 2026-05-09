@@ -35,6 +35,8 @@ import com.atguigu.tingshu.vo.search.AlbumInfoIndexVo;
 import com.atguigu.tingshu.vo.search.AlbumSearchResponseVo;
 import com.atguigu.tingshu.vo.user.UserInfoVo;
 import lombok.extern.slf4j.Slf4j;
+import org.redisson.api.RBloomFilter;
+import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.elasticsearch.core.suggest.Completion;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -99,7 +101,7 @@ public class SearchServiceImpl implements SearchService {
             albumInfoIndex.setAnnouncerName(userInfoVo.getNickname());
         }, threadPoolTaskExecutor);
 
-        //TODO 4.远程调用专辑微服务获取专辑统计信息
+        // 4.远程调用专辑微服务获取专辑统计信息
         CompletableFuture<Void> StatCompletableFuture = CompletableFuture.runAsync(() -> {
 
             //远程调用专辑微服务获取专辑统计信息
@@ -129,7 +131,16 @@ public class SearchServiceImpl implements SearchService {
         albumInfoIndexRepository.save(albumInfoIndex);
         //6.上架成功以后将专辑搜索信息加入到索引库中
         this.addSuggestInfo(albumId.toString(), albumInfoIndex.getAlbumTitle());
+        //7.将通过审核的专辑id加入到布隆过滤器防止缓存穿透
+        RBloomFilter<Long> bloomFilter = redissonClient.getBloomFilter(RedisConstant.ALBUM_BLOOM_FILTER);
+        if (bloomFilter.isExists()) {
+            bloomFilter.add(albumId);
+        }
+
     }
+
+    @Autowired
+    private RedissonClient redissonClient;
 
     /**
      * 根据id下架相关专辑

@@ -22,11 +22,16 @@ public interface AlbumInfoService extends IService<AlbumInfo> {
 
     void removeAlbumInfo(Long id);
 
-    AlbumInfo getAlbumInfoById(Long id);
+//    AlbumInfo getAlbumInfoById(Long id);
 
     void updateAlbumInfo(Long id, AlbumInfoVo albumInfoVo);
 
     List<AlbumInfo> findUserAllAlbumList(Long userId);
 
     AlbumStatVo getAlbumStatVo(Long albumId);
+
+    AlbumInfo getAlbumInfoById(Long id);
+
+    void rebuildBloom();
+
 }

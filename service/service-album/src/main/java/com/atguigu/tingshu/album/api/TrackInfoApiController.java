@@ -3,6 +3,7 @@ package com.atguigu.tingshu.album.api;
 import com.atguigu.tingshu.album.service.TrackInfoService;
 import com.atguigu.tingshu.common.login.GuiGuLogin;
 import com.atguigu.tingshu.common.result.Result;
+import com.atguigu.tingshu.common.util.AuthContextHolder;
 import com.atguigu.tingshu.model.album.TrackInfo;
 import com.atguigu.tingshu.query.album.TrackInfoQuery;
 import com.atguigu.tingshu.vo.album.AlbumTrackListVo;
@@ -17,6 +18,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.List;
 import java.util.Map;
 
 @Tag(name = "声音管理")
@@ -96,6 +98,22 @@ public class TrackInfoApiController {
     public Result<TrackStatVo> getTrackStatVo(@PathVariable Long trackId) {
         TrackStatVo trackStatVo = trackInfoService.getTrackStatVo(trackId);
         return Result.ok(trackStatVo);
+    }
+
+    @GuiGuLogin
+    @Operation(summary = "获取用户声音分集购买支付列表")
+    @GetMapping("/trackInfo/findUserTrackPaidList/{trackId}")
+    public Result<List<Map<String, Object>>> findUserTrackPaidList(@PathVariable Long trackId) {
+        Long userId = AuthContextHolder.getUserId();
+        List<Map<String, Object>> paidTrackList = trackInfoService.findUserTrackPaidList(trackId, userId);
+        return Result.ok(paidTrackList);
+    }
+
+    @Operation(summary = "获取用户代购买的声音列表")
+    @GetMapping("/trackInfo/findPaidTrackInfoList/{trackId}/{trackCount}")
+    public Result<List<TrackInfo>> findPaidTrackInfoList(@PathVariable Long trackId, @PathVariable Integer trackCount) {
+        List<TrackInfo> list = trackInfoService.findPaidTrackInfoList(trackId, trackCount);
+        return Result.ok(list);
     }
 }
 

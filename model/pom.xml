@@ -23,6 +23,7 @@
             <version>1.0</version>
             <scope>provided </scope>
         </dependency>
+
 <!--        <dependency>-->
 <!--            <groupId>com.github.xiaoymin</groupId>-->
 <!--            <artifactId>knife4j-spring-boot-starter</artifactId>-->

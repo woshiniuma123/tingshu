@@ -14,56 +14,77 @@ import java.util.List;
 @TableName("order_info")
 public class OrderInfo extends BaseEntity {
 
-	private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 1L;
 
-	@Schema(description = "用户ID")
-	@TableField("user_id")
-	private Long userId;
+    @Schema(description = "用户ID")
+    @TableField("user_id")
+    private Long userId;
 
-	@Schema(description = "订单标题")
-	@TableField("order_title")
-	private String orderTitle;
+    @Schema(description = "订单标题")
+    @TableField("order_title")
+    private String orderTitle;
 
-	@Schema(description = "订单号")
-	@TableField("order_no")
-	private String orderNo;
+    @Schema(description = "订单号")
+    @TableField("order_no")
+    private String orderNo;
 
-	@Schema(description = "订单状态：0901-未支付 0902-已支付 0903-已取消")
-	@TableField("order_status")
-	private String orderStatus;
+    @Schema(description = "订单状态：0901-未支付 0902-已支付 0903-已取消")
+    @TableField("order_status")
+    private String orderStatus;
 
-	@Schema(description = "订单原始金额")
-	@TableField("original_amount")
-	private BigDecimal originalAmount;
+    @Schema(description = "订单原始金额")
+    @TableField("original_amount")
+    private BigDecimal originalAmount;
 
-	@Schema(description = "减免总金额")
-	@TableField("derate_amount")
-	private BigDecimal derateAmount;
+    @Schema(description = "减免总金额")
+    @TableField("derate_amount")
+    private BigDecimal derateAmount;
 
-	@Schema(description = "订单总价")
-	@TableField("order_amount")
-	private BigDecimal orderAmount;
+    @Schema(description = "订单总价")
+    @TableField("order_amount")
+    private BigDecimal orderAmount;
 
-	@Schema(description = "付款项目类型: 1001-专辑 1002-声音 1003-vip会员")
-	@TableField("item_type")
-	private String itemType;
+    @Schema(description = "付款项目类型: 1001-专辑 1002-声音 1003-vip会员")
+    @TableField("item_type")
+    private String itemType;
 
-	@Schema(description = "支付方式：1101-微信 1102-支付宝 1103-账户余额")
-	@TableField("pay_way")
-	private String payWay;
+    @Schema(description = "支付方式：1101-微信 1102-支付宝 1103-账户余额")
+    @TableField("pay_way")
+    private String payWay;
 
 
-	@Schema(description = "订单明细列表")
-	@TableField(exist = false)
-	private List<OrderDetail> orderDetailList;
+    @Schema(description = "订单明细列表")
+    @TableField(exist = false)
+    private List<OrderDetail> orderDetailList;
 
-	@Schema(description = "订单减免明细列表")
-	@TableField(exist = false)
-	private List<OrderDerate> orderDerateList;
+    @Schema(description = "订单减免明细列表")
+    @TableField(exist = false)
+    private List<OrderDerate> orderDerateList;
 
-	@TableField(exist = false)
-	private String orderStatusName;
-	@TableField(exist = false)
-	private String payWayName;
+//	@TableField(exist = false)
+//	private String orderStatusName;
+//	@TableField(exist = false)
+//	private String payWayName;
 
+    public String getOrderStatusName() {
+        if ("0901".equals(orderStatus)) {
+            return "未支付";
+        } else if ("0902".equals(orderStatus)) {
+            return "已支付";
+        } else if ("0903".equals(orderStatus)) {
+            return "已取消";
+        }
+        return null;
+    }
+
+    public String getPayWayName() {
+        if ("1101".equals(payWay)) {
+            return "微信支付";
+        } else if ("1102".equals(payWay)) {
+            return "支付宝支付";
+        } else if ("1103".equals(payWay)) {
+            return "余额支付";
+        }
+        return null;
+    }
 }

@@ -1,6 +1,7 @@
 package com.atguigu.tingshu.album.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
+import cn.hutool.core.collection.CollectionUtil;
 import com.alibaba.nacos.common.utils.StringUtils;
 import com.atguigu.tingshu.album.config.VodConstantProperties;
 import com.atguigu.tingshu.album.mapper.AlbumInfoMapper;
@@ -34,6 +35,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -389,6 +391,86 @@ public class TrackInfoServiceImpl extends ServiceImpl<TrackInfoMapper, TrackInfo
     public TrackStatVo getTrackStatVo(Long trackId) {
         TrackStatVo trackStatVo = trackStatMapper.getTrackStatVo(trackId);
         return trackStatVo;
+    }
+
+
+    /**
+     * 获取用户声音分集购买支付列表
+     *
+     * @param trackId
+     * @return
+     */
+    @Override
+    public List<Map<String, Object>> findUserTrackPaidList(Long trackId, Long userId) {
+
+        List<Map<String, Object>> mapList = new ArrayList<>();
+        //1.根据声音相关信息
+        TrackInfo trackInfo = trackInfoMapper.selectById(trackId);
+        Long albumId = trackInfo.getAlbumId();
+        Integer orderNum = trackInfo.getOrderNum();
+        //2.调用用户远程微服务获取已购声音id列表
+        List<Long> trackPaidIds = userFeignClient.findUserPaidTrackList(albumId).getData();
+        //3.获取待购声音列表(可能包含已购的声音)
+        List<TrackInfo> waitPaidTrackIds = trackInfoMapper.selectList(
+                new LambdaQueryWrapper<TrackInfo>()
+                        .eq(TrackInfo::getAlbumId, albumId)
+                        .ge(TrackInfo::getOrderNum, orderNum)
+                        .select(TrackInfo::getId)
+        );
+        if (CollectionUtil.isNotEmpty(trackPaidIds)) {
+            //过滤出已经购买的声音保留待购声音
+            waitPaidTrackIds = waitPaidTrackIds
+                    .stream()
+                    .filter(t -> !trackPaidIds.contains(trackInfo.getId())).collect(Collectors.toList());
+        }
+        AlbumInfo albumInfo = albumInfoMapper.selectById(albumId);
+        //3.封装本集的map
+        mapList.add(Map.of("price", albumInfo.getPrice(), "name", "本集", "trackCount", 1));
+        int size = waitPaidTrackIds.size();
+        for (int i = 10; i <= 50; i += 10) {
+            if (i < size) {
+                mapList.add(Map.
+                        of("price", albumInfo.getPrice().multiply(BigDecimal.valueOf(i)),
+                                "name", "后" + i + "集",
+                                "trackCount", i));
+            } else {
+                mapList.add(Map.of("price",
+                        albumInfo.getPrice().multiply(BigDecimal.valueOf(size)),
+                        "name", "全集",
+                        "trackCount", size));
+                break;
+            }
+        }
+        return mapList;
+    }
+
+    /**
+     * 获取用户待购买的声音列表
+     *
+     * @param trackId
+     * @param trackCount
+     * @return
+     */
+    @Override
+    public List<TrackInfo> findPaidTrackInfoList(Long trackId, Integer trackCount) {
+        //1.查询声音所在的专辑和该声音的序号
+        TrackInfo trackInfo = trackInfoMapper.selectById(trackId);
+        Long albumId = trackInfo.getAlbumId();
+        Integer orderNum = trackInfo.getOrderNum();
+        //2.远程调用用户服务获取已经购买的声音列表
+        List<Long> paidTrackIds = userFeignClient.findUserPaidTrackList(albumId).getData();
+        //3.构建查询条件查询该专辑下所有的声音
+        LambdaQueryWrapper<TrackInfo> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(TrackInfo::getAlbumId, albumId);
+        queryWrapper.ge(TrackInfo::getOrderNum, orderNum);
+        queryWrapper.orderByAsc(TrackInfo::getOrderNum);
+        queryWrapper.select(TrackInfo::getCoverUrl, TrackInfo::getId, TrackInfo::getTrackTitle, TrackInfo::getAlbumId);
+        queryWrapper.last("limit " + trackCount);
+        if (CollectionUtil.isNotEmpty(paidTrackIds)) {
+            queryWrapper.notIn(TrackInfo::getId, paidTrackIds);
+        }
+        List<TrackInfo> trackInfos = trackInfoMapper.selectList(queryWrapper);
+        return trackInfos;
     }
 }
 

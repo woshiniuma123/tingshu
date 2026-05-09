@@ -6,7 +6,6 @@ import com.atguigu.tingshu.common.login.GuiGuLogin;
 import com.atguigu.tingshu.common.result.Result;
 import com.atguigu.tingshu.common.util.AuthContextHolder;
 import com.atguigu.tingshu.model.album.AlbumInfo;
-import com.atguigu.tingshu.model.album.BaseCategory1;
 import com.atguigu.tingshu.query.album.AlbumInfoQuery;
 import com.atguigu.tingshu.vo.album.AlbumInfoVo;
 import com.atguigu.tingshu.vo.album.AlbumListVo;
@@ -87,6 +86,13 @@ public class AlbumInfoApiController {
     public Result<AlbumStatVo> getAlbumStatVo(@PathVariable Long albumId) {
         AlbumStatVo albumStatVo = albumInfoService.getAlbumStatVo(albumId);
         return Result.ok(albumStatVo);
+    }
+
+    @Operation(summary = "项目维护期间重建布隆过滤器")
+    @GetMapping("/albumInfo/rebuild")
+    public Result rebuildBloom() {
+        albumInfoService.rebuildBloom();
+        return Result.ok();
     }
 
 

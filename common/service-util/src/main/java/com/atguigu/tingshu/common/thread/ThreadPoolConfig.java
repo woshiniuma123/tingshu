@@ -1,7 +1,6 @@
 package com.atguigu.tingshu.common.thread;
 
 import com.atguigu.tingshu.common.zipkin.ZipkinHelper;
-import com.atguigu.tingshu.common.zipkin.ZipkinTaskDecorator;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
@@ -55,7 +54,7 @@ public class ThreadPoolConfig {
         threadPoolTaskExecutor.setAwaitTerminationSeconds(300);
         // 线程不够用时由调用的线程处理该任务
         threadPoolTaskExecutor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
-        threadPoolTaskExecutor.setTaskDecorator(new ZipkinTaskDecorator(zipkinHelper));
+//        threadPoolTaskExecutor.setTaskDecorator(new ZipkinTaskDecorator(zipkinHelper));
         return threadPoolTaskExecutor;
     }
 }

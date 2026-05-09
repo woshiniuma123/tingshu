@@ -1,11 +1,16 @@
 package com.atguigu.tingshu.account.service.impl;
 
+import cn.hutool.core.lang.Assert;
 import com.atguigu.tingshu.account.mapper.UserAccountDetailMapper;
 import com.atguigu.tingshu.account.mapper.UserAccountMapper;
 import com.atguigu.tingshu.account.service.UserAccountService;
 import com.atguigu.tingshu.common.constant.SystemConstant;
+import com.atguigu.tingshu.common.execption.GuiguException;
 import com.atguigu.tingshu.model.account.UserAccount;
 import com.atguigu.tingshu.model.account.UserAccountDetail;
+import com.atguigu.tingshu.vo.account.AccountDeductVo;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -66,5 +71,55 @@ public class UserAccountServiceImpl extends ServiceImpl<UserAccountMapper, UserA
         userAccountDetail.setUserId(userAccountDetail.getUserId());
         userAccountDetail.setTradeType(SystemConstant.ACCOUNT_TRADE_TYPE_DEPOSIT);
         userAccountDetailMapper.insert(userAccountDetail);
+    }
+
+    /**
+     * 获取当前用户的账户可用余额
+     *
+     * @return
+     */
+    @Override
+    public BigDecimal getAvailableAmount(Long userId) {
+        UserAccount userAccount = userAccountMapper.selectOne(
+                new LambdaQueryWrapper<UserAccount>()
+                        .eq(UserAccount::getUserId, userId)
+                        .select(UserAccount::getAvailableAmount)
+        );
+        Assert.notNull(userAccount, "当前用户{}，账户信息为空", userId);
+        return userAccount.getAvailableAmount();
+    }
+
+    /**
+     * 检查并扣减账户余额
+     *
+     * @param accountDeductVo
+     */
+    @Override
+    public void checkAndDeduct(AccountDeductVo accountDeductVo) {
+        BigDecimal amount = accountDeductVo.getAmount();
+        Long userId = accountDeductVo.getUserId();
+        //1.先检查当前用户的账户余额是否充足
+        UserAccount userAccount = userAccountMapper
+                .checkAndDeduct(userId, amount);
+        if (userAccount == null) {
+            //当前用户余额不足
+            throw new GuiguException(500, "您当前的账户余额不足");
+        }
+        //2.余额充足则讲扣减当前用户的账户余额、增加用户的支出金额
+        userAccountMapper.update(null,
+                new LambdaUpdateWrapper<UserAccount>()
+                        .eq(UserAccount::getUserId, userId)
+                        .setSql("total_amount = total_amount-" + amount)
+                        .setSql("available_amount=available_amount-" + amount)
+                        .setSql("total_pay_amount=total_pay_amount+" + amount)
+        );
+        //3.增加用户的账户明细
+        UserAccountDetail userAccountDetail = new UserAccountDetail();
+        userAccountDetail.setUserId(userId);
+        userAccountDetail.setTradeType(SystemConstant.ACCOUNT_TRADE_TYPE_MINUS);
+        userAccountDetail.setTitle(accountDeductVo.getContent());
+        userAccountDetail.setOrderNo(accountDeductVo.getOrderNo());
+        userAccountDetail.setAmount(amount);
+        this.saveUserAccountDetail(userAccountDetail);
     }
 }

@@ -74,4 +74,28 @@ public class UserPaidTrackServiceImpl extends ServiceImpl<UserPaidTrackMapper, U
         }
         return map;
     }
+
+    /**
+     * 查询用户已经购买的声音id列表
+     *
+     * @param albumId
+     * @return
+     */
+    @Override
+    public List<Long> findUserPaidTrackList(Long albumId, Long userId) {
+        List<UserPaidTrack> userPaidTrackList = userPaidTrackMapper.selectList(
+                new LambdaQueryWrapper<UserPaidTrack>()
+                        .eq(UserPaidTrack::getAlbumId, albumId)
+                        .eq(UserPaidTrack::getUserId, userId).
+                        select(UserPaidTrack::getTrackId)
+        );
+
+        if (CollectionUtil.isNotEmpty(userPaidTrackList)) {
+            List<Long> userPaidTrackIds = userPaidTrackList.stream()
+                    .map(userPaidTrack -> userPaidTrack.getTrackId())
+                    .collect(Collectors.toList());
+            return userPaidTrackIds;
+        }
+        return List.of();
+    }
 }

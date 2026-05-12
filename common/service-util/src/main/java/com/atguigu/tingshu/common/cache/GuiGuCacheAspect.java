@@ -3,12 +3,10 @@ package com.atguigu.tingshu.common.cache;
 import cn.hutool.core.collection.CollectionUtil;
 import cn.hutool.core.util.RandomUtil;
 import com.atguigu.tingshu.common.constant.RedisConstant;
-import com.atguigu.tingshu.common.execption.GuiguException;
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
-import org.redisson.api.RBloomFilter;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,15 +30,7 @@ public class GuiGuCacheAspect {
     @Around("@annotation(guiGuCache)")
     public Object around(ProceedingJoinPoint pjp, GuiGuCache guiGuCache) {
         try {
-            Long albumId = (Long) pjp.getArgs()[0];
-            //先去布隆过滤器查找是否存在该专辑的id
-            RBloomFilter<Long> bloomFilter = redissonClient.getBloomFilter(RedisConstant.ALBUM_BLOOM_FILTER);
-            if (bloomFilter.isExists()) {
-                boolean contains = bloomFilter.contains(albumId);
-                if (!contains) {
-                    throw new GuiguException(500, "专辑不存在");
-                }
-            }
+
             //构建redisKey
             String redisKey = guiGuCache.prefix();
             List<Object> argList = Arrays.asList(pjp.getArgs());

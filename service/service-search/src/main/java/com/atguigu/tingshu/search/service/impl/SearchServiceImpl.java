@@ -81,6 +81,7 @@ public class SearchServiceImpl implements SearchService {
             AlbumInfo albumInfo = albumFeignClient.getAlbumInfo(albumId).getData();
             Assert.notNull(albumInfo, "专辑不存在{}", albumId);
             BeanUtil.copyProperties(albumInfo, albumInfoIndex);
+//            albumInfoIndex.setIncludeTrackCount(albumInfo.getIncludeTrackCount());
             List<AlbumAttributeValue> albumAttributeValueVoList = albumInfo.getAlbumAttributeValueVoList();
             List<AttributeValueIndex> attributeValueIndexList = albumAttributeValueVoList.stream().map(albumAttributeValue -> BeanUtil.copyProperties(albumAttributeValue, AttributeValueIndex.class)).collect(Collectors.toList());
             albumInfoIndex.setAttributeValueIndexList(attributeValueIndexList);

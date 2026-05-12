@@ -58,6 +58,7 @@ public class AlbumInfoApiController {
         return Result.ok();
     }
 
+    @Operation(summary = "获取专辑信息")
     @GetMapping("/albumInfo/getAlbumInfo/{id}")
     public Result<AlbumInfo> getAlbumInfo(@PathVariable Long id) {
         AlbumInfo albumInfo = albumInfoService.getAlbumInfoById(id);

@@ -19,4 +19,7 @@ public interface UserInfoService extends IService<UserInfo> {
     Boolean isPaidAlbum(Long userId, Long albumId);
 
     void savePaidRecord(UserPaidRecordVo userPaidRecordVo);
+
+    void updateUserVipStatus();
+
 }

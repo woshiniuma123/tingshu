@@ -11,5 +11,19 @@
 		id,user_id,title,trade_type,amount,order_no,create_time,update_time,is_deleted
 	</sql>
 
+
+    <select id="getUserAccountDetail" resultType="com.atguigu.tingshu.model.account.UserAccountDetail">
+
+        select id,
+               user_id,
+               title,
+               amount
+        from user_account_detail
+        where trade_type = #{tradeType}
+          and user_id = #{userId}
+          and is_deleted = 0
+
+    </select>
+
 </mapper>
 

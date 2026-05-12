@@ -77,7 +77,8 @@
                aav.value_id,
                aav.attribute_id,
                aav.create_time,
-               ai.user_id
+               ai.user_id,
+               ai.include_track_count
         from album_info ai
                  left join album_attribute_value aav on ai.id = aav.album_id
         where ai.id = #{id}

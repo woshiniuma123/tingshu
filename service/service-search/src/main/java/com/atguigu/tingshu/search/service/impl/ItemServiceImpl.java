@@ -3,6 +3,8 @@ package com.atguigu.tingshu.search.service.impl;
 import cn.hutool.core.lang.Assert;
 import com.atguigu.tingshu.album.AlbumFeignClient;
 import com.atguigu.tingshu.common.cache.GuiGuCache;
+import com.atguigu.tingshu.common.constant.RedisConstant;
+import com.atguigu.tingshu.common.execption.GuiguException;
 import com.atguigu.tingshu.model.album.AlbumInfo;
 import com.atguigu.tingshu.model.album.BaseCategoryView;
 import com.atguigu.tingshu.search.service.ItemService;
@@ -10,6 +12,7 @@ import com.atguigu.tingshu.user.client.UserFeignClient;
 import com.atguigu.tingshu.vo.album.AlbumStatVo;
 import com.atguigu.tingshu.vo.user.UserInfoVo;
 import lombok.extern.slf4j.Slf4j;
+import org.redisson.api.RBloomFilter;
 import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -42,6 +45,15 @@ public class ItemServiceImpl implements ItemService {
     @GuiGuCache(prefix = "search:albumItem:")
     @Override
     public Map<String, Object> getAlbumItem(Long albumId) {
+
+        //先去布隆过滤器查找是否存在该专辑的id
+        RBloomFilter<Long> bloomFilter = redissonClient.getBloomFilter(RedisConstant.ALBUM_BLOOM_FILTER);
+        if (bloomFilter.isExists()) {
+            boolean contains = bloomFilter.contains(albumId);
+            if (!contains) {
+                throw new GuiguException(500, "专辑不存在");
+            }
+        }
 
         Map<String, Object> map = new ConcurrentHashMap<>();
         CompletableFuture<AlbumInfo> albumInfoCompletableFuture = CompletableFuture.supplyAsync(() -> {

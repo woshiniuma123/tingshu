@@ -135,7 +135,7 @@ public class TrackInfoServiceImpl extends ServiceImpl<TrackInfoMapper, TrackInfo
                 trackInfo.setStatus(ALBUM_STATUS_ARTIFICIAL);
             } else if ("pass".equals(suggestion)) {
                 trackInfo.setStatus(ALBUM_STATUS_PASS);
-                //TODO 对声音进行审核
+                //对声音进行审核
                 //发起异步审核任务
                 String taskId = vodService.auditMedia(trackInfo.getMediaFileId());
                 trackInfo.setReviewTaskId(taskId);

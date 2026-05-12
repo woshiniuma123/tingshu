@@ -66,5 +66,12 @@ public class UserInfoApiController {
         userInfoService.savePaidRecord(userPaidRecordVo);
         return Result.ok();
     }
+
+    @Operation(summary = "用户定时更新用户的vip状态")
+    @GetMapping("/userInfo/updateUserVipStatus")
+    public Result updateUserVipStatus() {
+        userInfoService.updateUserVipStatus();
+        return Result.ok();
+    }
 }
 

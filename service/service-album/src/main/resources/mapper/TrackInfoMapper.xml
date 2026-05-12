@@ -28,6 +28,7 @@
             <if test="vo.trackTitle!=null and vo.track_title!=''">
                 and ti.track_title like concat('%',#{vo.track_title},'%')
             </if>
+            and ti.is_deleted=0
         </where>
         group by ti.id
         order by ti.id desc

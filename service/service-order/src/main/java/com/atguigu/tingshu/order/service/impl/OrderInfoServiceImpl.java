@@ -3,24 +3,24 @@ package com.atguigu.tingshu.order.service.impl;
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.collection.CollectionUtil;
 import cn.hutool.core.date.DateUtil;
-import cn.hutool.core.lang.Assert;
 import cn.hutool.core.util.IdUtil;
 import com.atguigu.tingshu.account.AccountFeignClient;
 import com.atguigu.tingshu.album.AlbumFeignClient;
 import com.atguigu.tingshu.common.constant.RedisConstant;
 import com.atguigu.tingshu.common.constant.SystemConstant;
 import com.atguigu.tingshu.common.execption.GuiguException;
+import com.atguigu.tingshu.common.rabbit.constant.MqConst;
+import com.atguigu.tingshu.common.rabbit.service.RabbitService;
 import com.atguigu.tingshu.common.result.Result;
-import com.atguigu.tingshu.model.album.AlbumInfo;
-import com.atguigu.tingshu.model.album.TrackInfo;
 import com.atguigu.tingshu.model.order.OrderDerate;
 import com.atguigu.tingshu.model.order.OrderDetail;
 import com.atguigu.tingshu.model.order.OrderInfo;
-import com.atguigu.tingshu.model.user.VipServiceConfig;
 import com.atguigu.tingshu.order.helper.SignHelper;
 import com.atguigu.tingshu.order.mapper.OrderDerateMapper;
 import com.atguigu.tingshu.order.mapper.OrderDetailMapper;
 import com.atguigu.tingshu.order.mapper.OrderInfoMapper;
+import com.atguigu.tingshu.order.pattern.TradeStrategy;
+import com.atguigu.tingshu.order.pattern.factory.TradeStrategyFactory;
 import com.atguigu.tingshu.order.service.OrderDerateService;
 import com.atguigu.tingshu.order.service.OrderDetailService;
 import com.atguigu.tingshu.order.service.OrderInfoService;
@@ -30,21 +30,23 @@ import com.atguigu.tingshu.vo.order.OrderDerateVo;
 import com.atguigu.tingshu.vo.order.OrderDetailVo;
 import com.atguigu.tingshu.vo.order.OrderInfoVo;
 import com.atguigu.tingshu.vo.order.TradeVo;
-import com.atguigu.tingshu.vo.user.UserInfoVo;
 import com.atguigu.tingshu.vo.user.UserPaidRecordVo;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import io.seata.spring.annotation.GlobalTransactional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.stereotype.Service;
 
-import java.math.BigDecimal;
-import java.math.RoundingMode;
-import java.util.*;
-import java.util.concurrent.TimeUnit;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -60,6 +62,8 @@ public class OrderInfoServiceImpl extends ServiceImpl<OrderInfoMapper, OrderInfo
     private AlbumFeignClient albumFeignClient;
     @Autowired
     private AccountFeignClient accountFeignClient;
+    @Autowired
+    private TradeStrategyFactory tradeStrategyFactory;
 
     /**
      * 获取订单数据汇总
@@ -70,7 +74,7 @@ public class OrderInfoServiceImpl extends ServiceImpl<OrderInfoMapper, OrderInfo
      */
     @Override
     public OrderInfoVo trade(TradeVo tradeVo, Long userId, Integer trackCount) {
-        //付款类型id
+       /* //付款类型id
         Long itemId = tradeVo.getItemId();
         //专辑付款类型 付款项目类型: 1001-专辑 1002-声音 1003-vip会员
         String itemType = tradeVo.getItemType();
@@ -206,8 +210,15 @@ public class OrderInfoServiceImpl extends ServiceImpl<OrderInfoMapper, OrderInfo
         Map<String, Object> orderInfoMap = BeanUtil.beanToMap(orderInfoVo, false, true);
         String sign = SignHelper.getSign(orderInfoMap);
         orderInfoVo.setSign(sign);
+        return orderInfoVo;*/
+        TradeStrategy strategy = tradeStrategyFactory.getStrategy(tradeVo.getItemType());
+        OrderInfoVo orderInfoVo = strategy.trade(tradeVo, userId);
         return orderInfoVo;
+
     }
+
+    @Autowired
+    private RabbitService rabbitService;
 
     /**
      * 提交订单
@@ -257,7 +268,7 @@ public class OrderInfoServiceImpl extends ServiceImpl<OrderInfoMapper, OrderInfo
             accountDeductVo.setContent(orderInfo.getOrderTitle());
             accountDeductVo.setOrderNo(orderInfo.getOrderNo());
             Result result = accountFeignClient.checkAndDeduct(accountDeductVo);
-            if (result.getCode() != 200) {
+            if (result.getCode().intValue() != 200) {
                 //4.2 扣减余额失败，业务终止，回滚全局事务
                 throw new GuiguException(result.getCode(), result.getMessage());
             }
@@ -281,13 +292,23 @@ public class OrderInfoServiceImpl extends ServiceImpl<OrderInfoMapper, OrderInfo
                     throw new GuiguException(result.getCode(), result.getMessage());
                 }
             }
-            int i = 1 / 0;
+//            int i = 1 / 0;
         }
+
+        //如果支付方式是微信支付调用rabbitmq发送延迟关闭订单的消息
+        if (SystemConstant.ORDER_PAY_WAY_WEIXIN.equals(payWay)) {
+
+            rabbitService.sendDealyMessage(MqConst.EXCHANGE_CANCEL_ORDER, MqConst.ROUTING_CANCEL_ORDER, orderInfo.getId(), cancelTTL);
+
+        }
+        //通过rabbitmq发送延迟消息进行延迟关闭订单 时间为15分钟
         Map<String, String> map = new HashMap<>();
         map.put("orderNo", orderInfo.getOrderNo());
         return map;
     }
 
+    @Value("${order.cancel}")
+    private Integer cancelTTL;
     @Autowired
     private OrderDetailService orderDetailService;
     @Autowired
@@ -376,6 +397,97 @@ public class OrderInfoServiceImpl extends ServiceImpl<OrderInfoMapper, OrderInfo
             orderInfo.setOrderDerateList(orderDerates);
         }
         return orderInfo;
+    }
+
+    /**
+     * 分页查询当前用户的订单列表
+     *
+     * @param pageInfo
+     * @param userId
+     * @return
+     */
+    @Override
+    public Page<OrderInfo> findUserPage(Page<OrderInfo> pageInfo, Long userId) {
+        pageInfo = orderInfoMapper.selectUserPage(pageInfo, userId);
+        List<OrderInfo> orderInfoList = pageInfo.getRecords();
+        List<Long> orderIdList = orderInfoList.stream().map(OrderInfo::getId).collect(Collectors.toList());
+        //根据订单id对订单明细进行分组
+        Map<Long, List<OrderDetail>> orderDetailList = orderDetailMapper.selectList(
+                new LambdaQueryWrapper<OrderDetail>()
+                        .in(OrderDetail::getOrderId, orderIdList)).stream().collect(Collectors.groupingBy(OrderDetail::getOrderId));
+        //根据订单id对订单减免进行分组
+        Map<Long, List<OrderDerate>> orderDerateList = orderDerateMapper.selectList(
+                new LambdaQueryWrapper<OrderDerate>()
+                        .in(OrderDerate::getOrderId, orderIdList)
+        ).stream().collect(Collectors.groupingBy(OrderDerate::getOrderId));
+        //遍历订单列表给每个订单设置上订单明细列表和订单减免列表
+        orderInfoList.forEach(
+                orderInfo -> {
+                    Long orderId = orderInfo.getId();
+                    List<OrderDerate> orderDerates = orderDerateList.get(orderId);
+                    orderInfo.setOrderDerateList(orderDerates);
+                    List<OrderDetail> orderDetails = orderDetailList.get(orderId);
+                    orderInfo.setOrderDetailList(orderDetails);
+                }
+        );
+        pageInfo.setRecords(orderInfoList);
+        return pageInfo;
+    }
+
+    /**
+     * 取消订单
+     *
+     * @param orderId
+     */
+    @Override
+    public void cancelOrder(Long orderId) {
+        //1.开始执行取消订单的方法
+        orderInfoMapper.update(null,
+                new LambdaUpdateWrapper<OrderInfo>()
+                        .eq(OrderInfo::getOrderStatus, SystemConstant.ORDER_STATUS_UNPAID)
+                        .eq(OrderInfo::getId, orderId)
+                        .set(OrderInfo::getOrderStatus, SystemConstant.ORDER_STATUS_CANCEL));
+    }
+
+    /**
+     * 支付回调成功后更新订单状态,以及调用用户服务完成虚拟物品发货
+     *
+     * @param orderNo
+     */
+    @Override
+    public void orderPaySuccess(String orderNo) {
+        //1.更新订单的状态为已支付
+        int flag = orderInfoMapper.update(
+                null,
+                new LambdaUpdateWrapper<OrderInfo>()
+                        .eq(OrderInfo::getOrderNo, orderNo)
+                        .eq(OrderInfo::getOrderStatus, SystemConstant.ORDER_STATUS_UNPAID)
+                        .set(OrderInfo::getOrderStatus, SystemConstant.ORDER_STATUS_PAID)
+        );
+        //更新订单状态成功后
+        if (flag > 0) {
+            //2.查询订单信息
+            OrderInfo orderInfo = orderInfoMapper.selectOne(
+                    new LambdaQueryWrapper<OrderInfo>()
+                            .eq(OrderInfo::getOrderNo, orderNo)
+            );
+            //2.进行虚拟物品发货 调用用户微服务
+            UserPaidRecordVo userPaidRecordVo = new UserPaidRecordVo();
+            userPaidRecordVo.setUserId(orderInfo.getUserId());
+            userPaidRecordVo.setItemType(orderInfo.getItemType());
+            //3.查询订单明细
+            List<Long> orderItemIdList = orderDetailMapper.selectList(
+                    new LambdaQueryWrapper<OrderDetail>()
+                            .eq(OrderDetail::getOrderId, orderInfo.getId())
+            ).stream().map(OrderDetail::getItemId).collect(Collectors.toList());
+            userPaidRecordVo.setItemIdList(orderItemIdList);
+            userPaidRecordVo.setOrderNo(orderNo);
+            Result result = userFeignClient.savePaidRecord(userPaidRecordVo);
+            if (result.getCode().intValue() != 200) {
+                throw new GuiguException(500, result.getMessage());
+            }
+
+        }
     }
 
     @Autowired

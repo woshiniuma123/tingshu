@@ -34,7 +34,7 @@
         <vod_api.version>2.1.4</vod_api.version>
         <minio.version>8.2.0</minio.version>
         <jodatime.version>2.10.1</jodatime.version>
-        <xxl-job.version>2.4.0</xxl-job.version>
+        <xxl-job.version>3.4.0</xxl-job.version>
         <wxpay.version>0.0.3</wxpay.version>
         <redisson.version>3.20.0</redisson.version>
         <guava.version>23.0</guava.version>

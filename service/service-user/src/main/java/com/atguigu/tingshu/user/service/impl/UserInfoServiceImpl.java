@@ -7,6 +7,7 @@ import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.lang.UUID;
 import cn.hutool.core.util.IdUtil;
 import com.atguigu.tingshu.album.AlbumFeignClient;
+import com.atguigu.tingshu.common.cache.GuiGuCache;
 import com.atguigu.tingshu.common.constant.RedisConstant;
 import com.atguigu.tingshu.common.execption.GuiguException;
 import com.atguigu.tingshu.common.rabbit.constant.MqConst;
@@ -29,8 +30,11 @@ import me.chanjar.weixin.common.error.WxErrorException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @Slf4j
@@ -66,7 +70,7 @@ public class UserInfoServiceImpl extends ServiceImpl<UserInfoMapper, UserInfo> i
                 userInfo.setNickname("用户" + UUID.randomUUID());
                 userInfo.setAvatarUrl("http://192.168.200.6:9000/tingshu/2026-04-20/2d023779007f4774bac5195b7c614a41.png");
                 userInfoMapper.insert(userInfo);
-                //TODO 2.添加用户的账户信息 采用异步方式
+                // 2.添加用户的账户信息 采用异步方式
                 HashMap<String, Object> msg = new HashMap<>();
                 msg.put("userId", userInfo.getId());
                 msg.put("amount", 100);
@@ -93,7 +97,7 @@ public class UserInfoServiceImpl extends ServiceImpl<UserInfoMapper, UserInfo> i
      * @param userId
      * @return
      */
-//    @GuiGuCache(prefix = "user:info:")
+    @GuiGuCache(prefix = "user:info:")
     @Override
     public UserInfoVo getUserInfo(Long userId) {
         UserInfo userInfo = userInfoMapper.selectById(userId);
@@ -102,6 +106,7 @@ public class UserInfoServiceImpl extends ServiceImpl<UserInfoMapper, UserInfo> i
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public void updateUser(UserUpdateVo userUpdateVo) {
         Long userId = AuthContextHolder.getUserId();
         UserInfo userInfo = BeanUtil.copyProperties(userUpdateVo, UserInfo.class);
@@ -230,6 +235,24 @@ public class UserInfoServiceImpl extends ServiceImpl<UserInfoMapper, UserInfo> i
         String itemType = userPaidRecordVo.getItemType();
         DeliveryStrategy strategy = deliveryFactory.getStrategy(itemType);
         strategy.delivery(userPaidRecordVo);
+    }
+
+    /**
+     * 定时更新用户的vip状态
+     */
+    @Override
+    public void updateUserVipStatus() {
+        Date now = new Date();
+        List<UserInfo> userInfos = userInfoMapper.selectList(
+                new LambdaQueryWrapper<UserInfo>()
+                        .eq(UserInfo::getIsVip, 1)
+                        .lt(UserInfo::getVipExpireTime, now)
+                        .select(UserInfo::getId)
+        );
+        for (UserInfo userInfo : userInfos) {
+            userInfo.setIsVip(0);
+        }
+        this.updateBatchById(userInfos);
     }
 }
 

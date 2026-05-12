@@ -211,7 +211,7 @@ public class AlbumInfoServiceImpl extends ServiceImpl<AlbumInfoMapper, AlbumInfo
      * @param id
      * @return
      */
-    @GuiGuCache(prefix = RedisConstant.ALBUM_INFO_PREFIX)
+//    @GuiGuCache(prefix = RedisConstant.ALBUM_INFO_PREFIX)
     @Override
     public AlbumInfo getAlbumInfoById(Long id) {
         AlbumInfo albumInfo = albumInfoMapper.getAlbumInfoById(id);

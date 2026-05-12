@@ -5,6 +5,18 @@
 <mapper namespace="com.atguigu.tingshu.order.mapper.OrderInfoMapper">
 
 
-
+    <select id="selectUserPage" resultType="com.atguigu.tingshu.model.order.OrderInfo">
+        select id,
+               order_title,
+               order_no,
+               original_amount,
+               derate_amount,
+               order_amount,
+               item_type,
+               pay_way
+        from order_info
+        where user_id = #{userId}
+          and is_deleted = 0
+    </select>
 </mapper>
 

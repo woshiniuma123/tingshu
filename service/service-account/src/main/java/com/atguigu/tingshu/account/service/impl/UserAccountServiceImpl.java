@@ -11,6 +11,7 @@ import com.atguigu.tingshu.model.account.UserAccountDetail;
 import com.atguigu.tingshu.vo.account.AccountDeductVo;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -69,7 +70,7 @@ public class UserAccountServiceImpl extends ServiceImpl<UserAccountMapper, UserA
         userAccountDetail.setOrderNo(userAccountDetail.getOrderNo());
         userAccountDetail.setTitle(userAccountDetail.getTitle());
         userAccountDetail.setUserId(userAccountDetail.getUserId());
-        userAccountDetail.setTradeType(SystemConstant.ACCOUNT_TRADE_TYPE_DEPOSIT);
+        userAccountDetail.setTradeType(userAccountDetail.getTradeType());
         userAccountDetailMapper.insert(userAccountDetail);
     }
 
@@ -121,5 +122,34 @@ public class UserAccountServiceImpl extends ServiceImpl<UserAccountMapper, UserA
         userAccountDetail.setOrderNo(accountDeductVo.getOrderNo());
         userAccountDetail.setAmount(amount);
         this.saveUserAccountDetail(userAccountDetail);
+    }
+
+    /**
+     * 充值成功后更新用户的账户信息
+     *
+     * @param userId
+     */
+    @Override
+    public void updateUserAccount(Long userId, BigDecimal rechargeAmount) {
+        userAccountMapper.update(null,
+                new LambdaUpdateWrapper<UserAccount>()
+                        .eq(UserAccount::getUserId, userId)
+                        .setSql("total_amount=total_amount+" + rechargeAmount)
+                        .setSql("available_amount=available_amount+" + rechargeAmount)
+                        .setSql("total_income_amount=total_income_amount+" + rechargeAmount)
+        );
+    }
+
+    /**
+     * 获取用户的充值或消费信息
+     *
+     * @param userId
+     * @param page
+     * @return
+     */
+    @Override
+    public Page<UserAccountDetail> getUserAccountDetail(Long userId, Page<UserAccountDetail> pageInfo, String tradeType) {
+        pageInfo = userAccountDetailMapper.getUserAccountDetail(tradeType, pageInfo, userId);
+        return pageInfo;
     }
 }

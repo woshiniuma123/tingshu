@@ -51,4 +51,10 @@ public class UserDegradeFeignClient implements UserFeignClient {
         log.error("调用用户远程微服务给用户发放权益失败");
         return null;
     }
+
+    @Override
+    public Result updateUserVipStatus() {
+        log.info("调用用户微服务远程检查并更新用户的vip状态失败");
+        return null;
+    }
 }

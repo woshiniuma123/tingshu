@@ -51,4 +51,7 @@ public interface UserFeignClient {
 
     @PostMapping("/userInfo/savePaidRecord")
     public Result savePaidRecord(@RequestBody UserPaidRecordVo userPaidRecordVo);
+
+    @GetMapping("/userInfo/updateUserVipStatus")
+    public Result updateUserVipStatus();
 }

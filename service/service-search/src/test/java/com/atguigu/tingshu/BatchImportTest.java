@@ -24,5 +24,8 @@ public class BatchImportTest {
                 e.printStackTrace();
             }
         }
+//        searchService.upperAlbum(1603l);
     }
+
+
 }
